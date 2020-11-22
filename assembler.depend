@@ -1,0 +1,58 @@
+# depslib dependency file v1.0
+1606060326 source:d:\programing\c++\assembler\main.cpp
+	"Recorder.h"
+	"Assembler.h"
+
+1605192848 d:\programing\c++\assembler\recorder.h
+	<vector>
+	<string>
+	<fstream>
+	<iostream>
+
+1605960901 source:d:\programing\c++\assembler\recorder.cpp
+	"Recorder.h"
+
+1606061746 source:d:\programing\c++\assembler\assembler.cpp
+	"Assembler.h"
+
+1606061725 d:\programing\c++\assembler\assembler.h
+	"Recorder.h"
+
+1602923771 source:c:\users\user\desktop\╰参祘Α\10626305\assembler\assembler.cpp
+	"Assembler.h"
+
+1602922221 c:\users\user\desktop\╰参祘Α\10626305\assembler\assembler.h
+	"Recorder.h"
+
+1602922652 c:\users\user\desktop\╰参祘Α\10626305\assembler\recorder.h
+	<vector>
+	<string>
+	<fstream>
+	<iostream>
+
+1602924187 source:c:\users\user\desktop\╰参祘Α\10626305\assembler\main.cpp
+	"Recorder.h"
+	"Assembler.h"
+
+1603359974 source:c:\users\user\desktop\╰参祘Α\10626305\assembler\recorder.cpp
+	"Recorder.h"
+
+1604117117 source:c:\users\user\desktop\10626305_10626305\10626305\assembler\assembler.cpp
+	"Assembler.h"
+
+1602922221 c:\users\user\desktop\10626305_10626305\10626305\assembler\assembler.h
+	"Recorder.h"
+
+1602922652 c:\users\user\desktop\10626305_10626305\10626305\assembler\recorder.h
+	<vector>
+	<string>
+	<fstream>
+	<iostream>
+
+1604114511 source:c:\users\user\desktop\10626305_10626305\10626305\assembler\main.cpp
+	"Recorder.h"
+	"Assembler.h"
+
+1604116228 source:c:\users\user\desktop\10626305_10626305\10626305\assembler\recorder.cpp
+	"Recorder.h"
+
