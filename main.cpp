@@ -66,16 +66,16 @@ void proc_exec()
     if (success) // do pass1 pass2
     {
         cout << "test success!\n" ;
+        assembler.pass1() ;
+        /* roughly
+
+        assembler.pass2() ;
+        */
     }
     else
     {
         cout << "test not success!\n" ;
     }
-        // end
-    /* roughly
-    pass1() ;
-    pass2() ;
-    */
 
     recorder.clearTempStorage() ;
     assembler.clearTempStorage() ;

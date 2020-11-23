@@ -14,6 +14,12 @@ class Assembler
         bool syntaxAnalysis() ;
         void clearTempStorage() ;
 
+        // translate process
+        void pass1() ;
+        // pass2()
+
+        // end
+
     private:
         Assembler() ;
         Assembler(const Assembler& src) ;
@@ -49,7 +55,13 @@ class Assembler
         bool assume_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
         bool segment_proc_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
         bool db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
+        bool org_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
+        bool equ_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
+        bool ptr_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
+        bool offset_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
         // end
+
+
 } ;
 
 #endif // ASSEMBLER_H

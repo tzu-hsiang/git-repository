@@ -663,6 +663,184 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
     return true ;
 }
 
+bool Assembler::org_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
+{
+    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    {
+        if (oneLine.line_token.at(i).name.compare("ORG") == 0)
+        {
+            if (oneLine.line_token.size() != 2)
+            {
+                cout << "line " << lineNum << ": syntax error(ORG)\n" ;
+                return false ;
+            }
+
+            if (i != 0)
+            {
+                cout << "line " << lineNum << ": it can not place anything before 'ORG'\n" ;
+                return false ;
+            }
+            else if (i == 0 && oneLine.line_token.at(i+1).table_num != 6)
+            {
+                cout << "line " << lineNum << ": it can only be a digits after 'ORG'\n" ;
+                return false ;
+            }
+            else
+            {
+                break ; // test success
+            }
+        }
+
+    } // end for
+
+    return true ;
+}
+
+bool Assembler::equ_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
+{
+    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    {
+        if (oneLine.line_token.at(i).name.compare("EQU") == 0)
+        {
+            if (oneLine.line_token.size() != 3 && oneLine.line_token.size() != 5)
+            {
+                cout << "line " << lineNum << ": syntax error(EQU)\n" ;
+                return false ;
+            }
+
+            if (i == 0)
+            {
+                cout << "line " << lineNum << ": it must place a symbol name before 'EQU'\n" ;
+                return false ;
+            }
+            else if (i == 1 && oneLine.line_token.at(i-1).table_num != 5)
+            {
+                cout << "line " << lineNum << ": it can only be a symbol name before 'EQU'\n" ;
+                return false ;
+            }
+            else if (i == 1 && oneLine.line_token.at(i+1).table_num != 5
+                            && oneLine.line_token.at(i+1).table_num != 6
+                            && oneLine.line_token.at(i+1).name.compare("\'") == 0)
+            {
+                cout << "line " << lineNum << ": it can only be a symbol, digits or a string after 'EQU'\n" ;
+                return false ;
+            }
+            else if (i != 1)
+            {
+                cout << "line " << lineNum << ": syntax error(EQU)\n" ;
+                return false ;
+            }
+            else
+            {
+                break ; // test success
+            }
+        }
+
+    } // end for
+
+    return true ;
+}
+
+bool Assembler::ptr_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
+{
+
+    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    {
+        if (oneLine.line_token.at(i).name.compare("PTR") == 0)
+        {
+            if (oneLine.line_token.size() < 3) // at least be a format such as '(b/w) ptr label'
+            {
+                cout << "line " << lineNum << ": syntax error(PTR)\n" ;
+                return false ;
+            }
+
+            if (i == 0)
+            {
+                cout << "line " << lineNum << ": syntax error(PTR)\n" ;
+                return false ;
+            }
+
+            if (oneLine.line_token.at(i-1).name.compare("BYTE") != 0 &&
+                oneLine.line_token.at(i-1).name.compare("WORD") != 0)
+            {
+                cout << "line " << lineNum << ": unknown prefix(PTR)\n" ;
+                return false ;
+            }
+
+            if (i+1 >= oneLine.line_token.size())
+            {
+                cout << "line " << lineNum << ": syntax error(PTR)\n" ;
+                return false ;
+            }
+
+            if (oneLine.line_token.at(i+1).table_num != 5 &&
+                oneLine.line_token.at(i+1).name.compare("CODE") != 0)
+            {
+                cout << "line " << lineNum << ": it must be a symbol name after 'PTR'\n" ;
+                return false ;
+            }
+
+            i += 2 ;
+            // check double ptr exist or not
+            for ( ;i < oneLine.line_token.size(); i++)
+            {
+                if (oneLine.line_token.at(i).name.compare("PTR") == 0)
+                {
+                    cout << "line " << lineNum << ": syntax error(PTR)\n" ;
+                    return false ;
+                }
+            }
+
+            break ; // test success
+
+        }
+
+    } // end for
+
+    return true ;
+}
+
+bool Assembler::offset_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
+{
+    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    {
+        if (oneLine.line_token.at(i).name.compare("OFFSET") == 0)
+        {
+            if (oneLine.line_token.size() < 2)
+            {
+                cout << "line " << lineNum << ": syntax error(OFFSET)\n" ;
+                return false ;
+            }
+
+            if (i+1 >= oneLine.line_token.size())
+            {
+                cout << "line " << lineNum << ": syntax error(OFFSET)\n" ;
+                return false ;
+            }
+
+            if (oneLine.line_token.at(i+1).table_num != 5)
+            {
+                cout << "line " << lineNum << ": it must be a symbol name after 'OFFSET'\n" ;
+                return false ;
+            }
+
+            if (i-1 >= 0)
+            {
+                // if it is placed something, should be a ,
+                if (oneLine.line_token.at(i-1).name.compare(",") != 0)
+                {
+                    cout << "line " << lineNum << ": syntax error(OFFSET)\n" ;
+                    return false ;
+                }
+            }
+
+            break ; // test success
+        }
+    } // end for
+
+    return true ;
+}
+
 bool Assembler::pseudoCheck(unsigned int lineNum, Recorder::LineInfo &oneLine)
 {
     // if one error occur, set testSuccess = false
@@ -679,6 +857,22 @@ bool Assembler::pseudoCheck(unsigned int lineNum, Recorder::LineInfo &oneLine)
         testSuccess = false ;
 
     oneSuccess = db_dw_byte_word_test(lineNum, oneLine) ;
+    if (!oneSuccess)
+        testSuccess = false ;
+
+    oneSuccess = org_test(lineNum, oneLine) ;
+    if (!oneSuccess)
+        testSuccess = false ;
+
+    oneSuccess = equ_test(lineNum, oneLine) ;
+    if (!oneSuccess)
+        testSuccess = false ;
+
+    oneSuccess = ptr_test(lineNum, oneLine) ;
+    if (!oneSuccess)
+        testSuccess = false ;
+
+    oneSuccess = offset_test(lineNum, oneLine) ;
     if (!oneSuccess)
         testSuccess = false ;
 
@@ -723,6 +917,14 @@ bool Assembler::syntaxAnalysis()
     syntaxCheckBuffer.seg_num = 0 ;
 
     return success ;
+}
+
+void Assembler::pass1()
+{
+    Recorder &recorder = Recorder::getRecorder() ;
+    vector<Recorder::LineInfo> &line_info_list = recorder.line_info_list ;
+
+
 }
 
 void Assembler::addTokenFrmBuf(bool DelimiterFlag, bool DigitFlag, bool StringFlag)
@@ -846,7 +1048,7 @@ void Assembler::cutOneLineToTokenBuf(string& code_line)
                 undef_token_buf.clear() ;
             }
         }
-        else if (!string_process && code_line.at(idx) == ' ' || code_line.at(idx) == '\t') // white space
+        else if (!string_process && (code_line.at(idx) == ' ' || code_line.at(idx) == '\t')) // white space
         {
             if (!undef_token_buf.empty())
             {

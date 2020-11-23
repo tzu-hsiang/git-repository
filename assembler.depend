@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1606060326 source:d:\programing\c++\assembler\main.cpp
+1606144214 source:d:\programing\c++\assembler\main.cpp
 	"Recorder.h"
 	"Assembler.h"
 
@@ -12,10 +12,10 @@
 1605960901 source:d:\programing\c++\assembler\recorder.cpp
 	"Recorder.h"
 
-1606061746 source:d:\programing\c++\assembler\assembler.cpp
+1606144041 source:d:\programing\c++\assembler\assembler.cpp
 	"Assembler.h"
 
-1606061725 d:\programing\c++\assembler\assembler.h
+1606144065 d:\programing\c++\assembler\assembler.h
 	"Recorder.h"
 
 1602923771 source:c:\users\user\desktop\系統程式\10626305\assembler\assembler.cpp
