@@ -36,6 +36,16 @@ class Assembler
             bool end_defined ;
         } SyntaxCheckBuffer ;
 
+        // for translate process
+        typedef struct SymbolEntry
+        {
+            string name ;
+            unsigned int address ;
+        } SymbolEntry ;
+
+        unsigned int virtual_PC ;
+        vector<SymbolEntry> symbol_table ;
+        // end
 
         // small temporary buffer list
         string undef_token_buf ;

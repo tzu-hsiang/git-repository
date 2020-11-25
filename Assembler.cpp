@@ -698,11 +698,14 @@ bool Assembler::org_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
 
 bool Assembler::equ_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
 {
-    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    bool equ_process = false ;
+    unsigned int i = 0 ;
+
+    for (i = 0 ; i < oneLine.line_token.size(); i++)
     {
         if (oneLine.line_token.at(i).name.compare("EQU") == 0)
         {
-            if (oneLine.line_token.size() != 3 && oneLine.line_token.size() != 5)
+            if (oneLine.line_token.size() < 3)
             {
                 cout << "line " << lineNum << ": syntax error(EQU)\n" ;
                 return false ;
@@ -718,9 +721,12 @@ bool Assembler::equ_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
                 cout << "line " << lineNum << ": it can only be a symbol name before 'EQU'\n" ;
                 return false ;
             }
-            else if (i == 1 && oneLine.line_token.at(i+1).table_num != 5
+            else if (i == 1 && oneLine.line_token.at(i+1).name.compare("(") != 0
+                            && oneLine.line_token.at(i+1).name.compare("+") != 0
+                            && oneLine.line_token.at(i+1).name.compare("-") != 0
+                            && oneLine.line_token.at(i+1).table_num != 5
                             && oneLine.line_token.at(i+1).table_num != 6
-                            && oneLine.line_token.at(i+1).name.compare("\'") == 0)
+                            && oneLine.line_token.at(i+1).name.compare("\'") != 0)
             {
                 cout << "line " << lineNum << ": it can only be a symbol, digits or a string after 'EQU'\n" ;
                 return false ;
@@ -732,11 +738,147 @@ bool Assembler::equ_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
             }
             else
             {
+                i++ ;
+
+                if (oneLine.line_token.size() == i+1)
+                    equ_process = false ;
+                else
+                    equ_process = true ;
+
                 break ; // test success
             }
         }
 
     } // end for
+
+    unsigned int s = i ;
+
+    if (equ_process)
+    {
+        short left_bracket = 0 ;
+
+        if (oneLine.line_token.at(i).table_num == 5 ||
+            oneLine.line_token.at(i).table_num == 6 ||
+            oneLine.line_token.at(i).name.compare("(") == 0 ||
+            oneLine.line_token.at(i).name.compare("+") == 0 ||
+            oneLine.line_token.at(i).name.compare("-") == 0)
+        {
+            for ( ;i < oneLine.line_token.size(); i++)
+            {
+                if (oneLine.line_token.at(i).table_num == 5 ||
+                    oneLine.line_token.at(i).table_num == 6)
+                {
+                    if (i+1 < oneLine.line_token.size() &&
+                        oneLine.line_token.at(i+1).name.compare("+") != 0 &&
+                        oneLine.line_token.at(i+1).name.compare("-") != 0 &&
+                        oneLine.line_token.at(i+1).name.compare(")") != 0)
+                    {
+                        cout << "line " << lineNum << ": syntax error(EQU),"
+                         "it expect a delimiter, such as '+', '-', or ')'\n" ;
+                        return false ;
+                    }
+
+                }
+
+                if (oneLine.line_token.at(i).name.compare("(") == 0)
+                {
+                    if (i+1 < oneLine.line_token.size() &&
+                        oneLine.line_token.at(i+1).name.compare("+") != 0 &&
+                        oneLine.line_token.at(i+1).name.compare("-") != 0 &&
+                        oneLine.line_token.at(i+1).name.compare("(") != 0 &&
+                        oneLine.line_token.at(i+1).table_num != 5 &&
+                        oneLine.line_token.at(i+1).table_num != 6)
+                    {
+                        cout << "line " << lineNum << ": syntax error(EQU),"
+                         "it expect symbol or digits or a delimiter, such as '+', '-'\n" ;
+                        return false ;
+                    }
+
+                    if (i == oneLine.line_token.size()-1)
+                    {
+                        cout << "line " << lineNum << ": syntax error(EQU),"
+                         "it doesn't expect a ')'\n" ;
+                        return false ;
+                    }
+
+                    left_bracket++ ;
+                }
+
+                if (oneLine.line_token.at(i).name.compare(")") == 0)
+                {
+                    if (i+1 < oneLine.line_token.size() &&
+                        oneLine.line_token.at(i+1).name.compare("+") != 0 &&
+                        oneLine.line_token.at(i+1).name.compare("-") != 0 &&
+                        oneLine.line_token.at(i+1).name.compare(")") != 0)
+                    {
+                        cout << "line " << lineNum << ": syntax error(EQU),"
+                         "it expect a delimiter, such as '+', '-', ')'\n" ;
+                        return false ;
+                    }
+
+                    left_bracket-- ;
+                }
+
+                if (oneLine.line_token.at(i).name.compare("+") == 0 ||
+                    oneLine.line_token.at(i).name.compare("-") == 0)
+                {
+                    if (i+1 < oneLine.line_token.size() &&
+                        oneLine.line_token.at(i+1).table_num != 5 &&
+                        oneLine.line_token.at(i+1).table_num != 6 &&
+                        oneLine.line_token.at(i+1).name.compare("(") != 0)
+                    {
+                        cout << "line " << lineNum << ": syntax error(EQU),"
+                         "it expect symbol or digits or a '('\n" ;
+                        return false ;
+                    }
+
+                    if (i == oneLine.line_token.size()-1)
+                    {
+                        cout << "line " << lineNum << ": syntax error(EQU),"
+                         "it doesn't expect a '+' or '-'\n" ;
+                        return false ;
+                    }
+                }
+
+            } // end inner for
+
+            if (left_bracket != 0)
+            {
+                cout << "line " << lineNum << ": syntax error(EQU),"
+                         "it looks like more or less bracket\n" ;
+                return false ;
+            }
+        }
+
+        // check string
+        if (oneLine.line_token.at(s).name.compare("\'") == 0)
+        {
+            if (s+2 >= oneLine.line_token.size() ||
+                s+1 >= oneLine.line_token.size())
+            {
+                cout << "line " << lineNum << ":1 syntax error(EQU)\n" ;
+                return false ;
+            }
+
+            if (oneLine.line_token.at(s+1).table_num != 7)
+            {
+                cout << "line " << lineNum << ":2 syntax error(EQU)\n" ;
+                return false ;
+            }
+
+            if (oneLine.line_token.at(s+2).name.compare("\'") != 0)
+            {
+                cout << "line " << lineNum << ":3 syntax error(EQU)\n" ;
+                return false ;
+            }
+
+            if (s+3 > oneLine.line_token.size())
+            {
+                cout << "line " << lineNum << ":4 syntax error(EQU)\n" ;
+                return false ;
+            }
+        }
+    }
 
     return true ;
 }
