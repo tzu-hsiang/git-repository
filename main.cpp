@@ -1,3 +1,8 @@
+/*
+    ### encoding: UTF-8
+    ### standard: c++11
+*/
+
 #include "Recorder.h"
 #include "Assembler.h"
 
@@ -44,7 +49,9 @@ void proc_exec()
         return ;
 
     Assembler &assembler = Assembler::getAssembler() ;
+    cout << "### begin to do lexical analysis.\n" ;
     assembler.lexicalAnalysis() ;
+    cout << "### OK.\n" ;
 
     // test assign to line_info_list (success)
     for (unsigned int x = 0; x < recorder.line_info_list.size(); x++)
@@ -61,20 +68,26 @@ void proc_exec()
     // end test
 
     // to write >> syntaxAnalysis() ;
+    cout << "### begin to check syntax.\n" ;
     bool success = assembler.syntaxAnalysis() ;
+    cout << "### OK.\n" ;
 
     if (success) // do pass1 pass2
     {
-        cout << "test success!\n" ;
-        assembler.pass1() ;
+        cout << "### begin to generate machine code.\n" ;
+        success = assembler.pass1() ;
+        cout << "### OK.\n" ;
         /* roughly
 
+        if (success)
         assembler.pass2() ;
+        cout << "### OK.\n" ;
         */
+        cout << "### machine code were generated successful!\n" ;
     }
     else
     {
-        cout << "test not success!\n" ;
+        cout << "### syntax(s) error!\n" ;
     }
 
     recorder.clearTempStorage() ;

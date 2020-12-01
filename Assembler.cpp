@@ -15,6 +15,9 @@ Assembler& Assembler::getAssembler()
 void Assembler::clearTempStorage()
 {
     undef_token_buf.clear() ;
+    virtual_PC = 0 ; ;
+    vector<SymbolEntry>().swap(symbol_table) ;
+    vector<string>().swap(instrs_addr) ;
 }
 
 bool Assembler::isDigits(string& token)
@@ -483,9 +486,14 @@ bool Assembler::segment_proc_test(unsigned int lineNum, Recorder::LineInfo &oneL
 
 bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
 {
-    // 1: digits or ' | 2: string | 3: ' | 4: , or DUP | 5: DUP-> ( | 6: DUP-> ) | 7: ,
+    // 1: digits or ' | 2: string | 3: ' | 4: , or DUP or ) | 5: DUP-> ( | 6: DUP-> ) | 7: ,
+    // if '+', '-', than it must be digits after '+/-'
+    // 8: digits
+    // 9: + or - or ( or digits
+    // 10: + or - or ) or ,
     unsigned short expect_status = 0 ; // begin status
     bool is_dup_proccess = false ;
+    int left_bracket = 0 ;
 
     for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
     {
@@ -517,6 +525,23 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             else
             {
                 expect_status = 1 ;
+
+                if (i+1 < oneLine.line_token.size())
+                {
+                    if (oneLine.line_token.at(i+1).name.compare("-") == 0)
+                    {
+                        expect_status = 8 ;
+                        i++ ;
+                    }
+
+                    if (oneLine.line_token.at(i+1).name.compare("(") == 0)
+                    {
+                        left_bracket++ ;
+                        expect_status = 9 ;
+                        i++ ;
+                    }
+                }
+
                 continue ;
             }
         }
@@ -597,6 +622,12 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
                 is_dup_proccess = true ;
                 continue ;
             }
+            else if (oneLine.line_token.at(i).name.compare(")") == 0)
+            {
+                left_bracket-- ;
+                expect_status = 10 ;
+                continue ;
+            }
             else
             {
                 cout << "line " << lineNum << ": invalid assign pseudo(expect complete syntax).\n" ;
@@ -648,15 +679,119 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
         } // end status=7
 
+        if (expect_status == 8) // expect to digits
+        {
+            if (oneLine.line_token.at(i).table_num == 6) // case:digits
+            {
+                if (is_dup_proccess)
+                    expect_status = 6 ; // next get )
+                else
+                    expect_status = 4 ; // next get ,
+
+                continue ;
+            }
+            else
+            {
+                cout << "line " << lineNum << ": invalid assign pseudo.\n" ;
+                return false ;
+            }
+        } // end status=8
+
+        if (expect_status == 9) // expect a + or - or ( or digits
+        {
+            if (oneLine.line_token.at(i).table_num == 6) // case:digits
+            {
+                if (is_dup_proccess)
+                    expect_status = 6 ; // next get )
+                else
+                    expect_status = 4 ; // next get ,
+
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).name.compare("+") == 0)
+            {
+                expect_status = 8 ;
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).name.compare("-") == 0)
+            {
+                expect_status = 8 ;
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).name.compare("(") == 0)
+            {
+                expect_status = 9 ;
+                continue ;
+            }
+            else
+            {
+                cout << "line " << lineNum << ": invalid assign pseudo.\n" ;
+                return false ;
+            }
+        } // end status=9
+
+         // 10: + or - or ) or ,
+        if (expect_status == 10) // expect a + or - or ) or ,
+        {
+            if (oneLine.line_token.at(i).name.compare("+") == 0)
+            {
+                expect_status = 8 ;
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).name.compare("-") == 0)
+            {
+                expect_status = 8 ;
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).name.compare(")") == 0)
+            {
+                expect_status = 10 ;
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).name.compare(",") == 0)
+            {
+                expect_status = 1 ;
+
+                if (i+1 < oneLine.line_token.size())
+                {
+                    if (oneLine.line_token.at(i+1).name.compare("-") == 0)
+                    {
+                        expect_status = 8 ;
+                        i++ ;
+                    }
+
+                    if (oneLine.line_token.at(i+1).name.compare("(") == 0)
+                    {
+                        left_bracket++ ;
+                        expect_status = 9 ;
+                        i++ ;
+                    }
+                }
+
+                continue ;
+            }
+            else
+            {
+                cout << "line " << lineNum << ": invalid assign pseudo.\n" ;
+                return false ;
+            }
+        } // end status=10
+
     } // end for
 
     /* exit(0), if expect_status = 4
      * other instructions, if expect_status = 0
      * DUP exit, if expect = 7
     */
-    if (expect_status != 4 && expect_status != 7 && expect_status != 0)
+    if (expect_status != 4 && expect_status != 7 && expect_status != 10 &&expect_status != 0)
     {
         cout << "line " << lineNum << ": expect complete assign pseudo.\n" ;
+        return false ;
+    }
+
+    if (left_bracket != 0)
+    {
+        cout << "line " << lineNum << ": it looks like less or more brackets here.\n" ;
         return false ;
     }
 
@@ -682,7 +817,7 @@ bool Assembler::org_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
             }
             else if (i == 0 && oneLine.line_token.at(i+1).table_num != 6)
             {
-                cout << "line " << lineNum << ": it can only be a digits after 'ORG'\n" ;
+                cout << "line " << lineNum << ": it can only be a positive digits after 'ORG'\n" ;
                 return false ;
             }
             else
@@ -1061,11 +1196,709 @@ bool Assembler::syntaxAnalysis()
     return success ;
 }
 
-void Assembler::pass1()
+int Assembler::atoi_hex_to_dec(string number)
+{
+    unsigned int start_pt = 0 ;
+
+    for (unsigned int i = 0 ; i < number.size() ; )
+    {
+        if (number[i] == '0')
+            i++ ;
+        else
+        {
+            start_pt = i ;
+            break ;
+        }
+    }
+
+    int ans = 0 ;
+    for (start_pt = 0 ; start_pt < number.size() ; start_pt++)
+    {
+        char t = number[start_pt] ;
+        if (t == 'h' || t == 'H')
+            break ;
+
+        if (t >= '0' && t <= '9')
+            ans = ans * 16 + t - '0' ;
+        else
+            ans = ans * 16 + t - 'A' + 10 ;
+    }
+
+    return ans;
+}
+
+void Assembler::display_addr(unsigned int pc, string &addr)
+{
+    unsigned int quotient = pc, remainder = 0 ;
+
+    while (quotient > 0)
+    {
+        remainder = quotient % 16 ;
+        switch (remainder)
+        {
+        case 10:
+            addr += 'A' ;
+            break ;
+        case 11:
+            addr += 'B' ;
+            break ;
+        case 12:
+            addr += 'C' ;
+            break ;
+        case 13:
+            addr += 'D' ;
+            break ;
+        case 14:
+            addr += 'E' ;
+            break ;
+        case 15:
+            addr += 'F' ;
+            break ;
+        default:
+            char digit = remainder + '0' ;
+            addr += digit ;
+            break ;
+        } // end switch
+
+        quotient /= 16 ;
+    }
+
+    while (addr.size() < 4)
+        addr += '0' ;
+
+    reverse(addr.begin(), addr.end()) ;
+
+    if (addr.size() > 4) // for '-' prefix
+        addr.assign(addr, addr.size()-4, 4) ;
+
+}
+
+bool Assembler::add_symbol_entry(unsigned int pc, string &name, string &using_seg_reg,
+                                 bool dup_check)
+{
+    // check duplicate defined symbol
+    if (dup_check)
+    {
+        for (unsigned int i = 0; i < symbol_table.size(); i++)
+        {
+            if (name.compare(symbol_table.at(i).name) == 0)
+                return false ;
+        }
+    }
+
+    SymbolEntry one_entry ;
+
+    string addr ;
+    display_addr(pc, addr) ; // int pc change to string addr
+
+    one_entry.seg_scope = using_seg_reg ;
+    one_entry.name = name ;
+    one_entry.address = addr ; // (__hex)
+    symbol_table.push_back(one_entry) ;
+
+    return true ;
+}
+
+int Assembler::priority(char &op)
+{
+    switch(op)
+    {
+        case '+':
+        case '-':
+            return 1 ;
+        case '*':
+        case '/':
+            return 2 ;
+        default:
+            return 0;
+    }
+}
+
+void Assembler::infix_to_postfix(string &src, string &result)
+{
+    if (src[0] == '+' || src[0] == '-')
+        src.insert(0, "0") ;
+
+    stack<char> buf ;
+
+    for (unsigned int i = 0; i < src.size(); i++)
+    {
+        switch(src[i])
+        {
+        case '(':
+            buf.push(src[i]) ;
+            break ;
+
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+            while (!buf.empty() && (priority(buf.top()) >= priority(src[i])))
+            {
+                result += buf.top() ;
+                buf.pop() ;
+            }
+
+            buf.push(src[i]) ;
+            break ;
+
+        case ')':
+            while (buf.top() != '(')
+            {
+                result += buf.top() ;
+                buf.pop() ;
+            }
+
+            buf.pop() ;
+            break ;
+
+        default:
+            result += src[i] ;
+            break ;
+        }
+    }
+
+    while (!buf.empty())
+    {
+        result += buf.top() ;
+        buf.pop() ;
+    }
+}
+
+string Assembler::calculate_postfix(string infix, string &postfix)
+{
+    vector<string> num_list ;
+    string num ; // for buffering
+
+    for (unsigned int i = 0; i < infix.size(); i++)
+    {
+        if (infix[i] != '+' && infix[i] != '-' && infix[i] != '*' && infix[i] != '/' &&
+            infix[i] != '(' && infix[i] != ')' )
+            num += infix[i] ;
+        else
+        {
+            if (!num.empty())
+            {
+                num_list.push_back(num) ;
+                num.clear() ;
+            }
+        }
+    }
+
+    if (!num.empty())
+    {
+        num_list.push_back(num) ;
+        num.clear() ;
+    }
+
+
+    stack<string> buf ;
+    unsigned int compare_st = 0;
+
+    for (unsigned int i = 0; i < postfix.size(); i++)
+    {
+        if (postfix[i] != '+' && // is operand
+            postfix[i] != '-' &&
+            postfix[i] != '*' &&
+            postfix[i] != '/' )
+        {
+            num += postfix[i] ;
+
+            // compare num list
+
+            if (num.compare(num_list[compare_st]) == 0)
+            {
+                buf.push(num) ;
+                num.clear() ;
+                compare_st++ ;
+            }
+
+        }
+        else
+        {
+            int total = 0 ;
+            int num_b = atoi((buf.top()).c_str()) ;
+            buf.pop() ;
+            int num_a = atoi((buf.top()).c_str()) ;
+            buf.pop() ;
+
+            if (postfix[i] == '+')
+                total = num_a + num_b ;
+            else if (postfix[i] == '-')
+                total = num_a - num_b ;
+            else if (postfix[i] == '*')
+                total = num_a * num_b ;
+            else
+                total = num_a / num_b ;
+
+            buf.push(to_string(total)) ;
+        }
+
+    }
+
+    return buf.top() ;
+}
+
+bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num, string &cs_onto_seg_name,
+                           string &ds_onto_seg_name, string &ss_onto_seg_name,
+                           string &es_onto_seg_name, string &using_seg_name,
+                           string &using_seg_reg, unsigned short &error_status)
+{
+
+    for (unsigned int i = 0 ; i < oneLine.line_token.size(); i++)
+    {
+        // def symbol
+        if ((oneLine.line_token.at(i).table_num == 5 ||
+            oneLine.line_token.at(i).name.compare("CODE") == 0) &&
+            i == 0 &&
+            oneLine.line_token.at(i+1).name.compare("ENDS") != 0 &&
+            oneLine.line_token.at(i+1).name.compare("ENDP") != 0)
+        {
+            bool not_duplicate = false ;
+
+            if (oneLine.line_token.at(i+1).name.compare("EQU") == 0)
+            {
+                if (oneLine.line_token.at(i+2).table_num != 5 ||
+                    i+2 != oneLine.line_token.size() - 1)
+                {
+                    ;
+                }
+                else
+                {
+                    not_duplicate = add_symbol_entry(virtual_PC, oneLine.line_token.at(i).name, using_seg_reg,
+                                             true) ;
+                    if (!not_duplicate)
+                    {
+                        cout << "line " << line_num << ": duplicate defined symbol(" << oneLine.line_token.at(i).name << ")\n" ;
+                        error_status = 1 ;
+                        return true ;
+                    }
+
+                    if (i == oneLine.line_token.size()-1)
+                        return true ;
+                    else if (i == oneLine.line_token.size()-2)
+                    {
+                        if (oneLine.line_token.at(i+1).name.compare(":") == 0)
+                            return true ;
+                    }
+                }
+
+            }
+            else
+            {
+                not_duplicate = add_symbol_entry(virtual_PC, oneLine.line_token.at(i).name, using_seg_reg,
+                                             true) ;
+                if (!not_duplicate)
+                {
+                    cout << "line " << line_num << ": duplicate defined symbol(" << oneLine.line_token.at(i).name << ")\n" ;
+                    error_status = 1 ;
+                    return true ;
+                }
+
+                if (i == oneLine.line_token.size()-1)
+                    return true ;
+                else if (i == oneLine.line_token.size()-2)
+                {
+                    if (oneLine.line_token.at(i+1).name.compare(":") == 0)
+                        return true ;
+                }
+            }
+
+        }
+
+        // segment
+        if (oneLine.line_token.at(i).name.compare("SEGMENT") == 0)
+        {
+            // record segment name
+            using_seg_name = oneLine.line_token.at(i-1).name ;
+
+            if (using_seg_name.compare(cs_onto_seg_name) == 0)
+                using_seg_reg = "CS" ;
+            else if (using_seg_name.compare(ds_onto_seg_name) == 0)
+                using_seg_reg = "DS" ;
+            else if (using_seg_name.compare(ss_onto_seg_name) == 0)
+                using_seg_reg = "SS" ;
+            else if (using_seg_name.compare(es_onto_seg_name) == 0)
+                using_seg_reg = "ES" ;
+            else
+                using_seg_reg = "CS" ;
+
+            // reset seg symbol from default CS
+            symbol_table.at(symbol_table.size()-1).seg_scope = using_seg_reg ;
+
+            return true ;
+        }
+
+        // org
+        if (oneLine.line_token.at(i).name.compare("ORG") == 0)
+        {
+            string digits = oneLine.line_token.at(i+1).name ;
+            Recorder::strToUpper(digits) ;
+            if (digits.at(digits.length() - 1) == 'H') // hex
+                virtual_PC = atoi_hex_to_dec(digits) ;
+            else
+                virtual_PC = atoi(digits.c_str()) ;
+
+            string addr ;
+            display_addr(virtual_PC, addr) ;
+
+            return true ;
+        }
+
+        // assume
+        if (oneLine.line_token.at(i).name.compare("ASSUME") == 0)
+        {
+            i++ ;
+            while (i < oneLine.line_token.size())
+            {
+                if (oneLine.line_token.at(i).name.compare("CS") == 0)
+                {
+                    i += 2 ;
+                    cs_onto_seg_name = oneLine.line_token.at(i).name ;
+                }
+                else if (oneLine.line_token.at(i).name.compare("DS") == 0)
+                {
+                    i += 2 ;
+                    ds_onto_seg_name = oneLine.line_token.at(i).name ;
+                }
+                else if (oneLine.line_token.at(i).name.compare("SS") == 0)
+                {
+                    i += 2 ;
+                    ss_onto_seg_name = oneLine.line_token.at(i).name ;
+                }
+                else if (oneLine.line_token.at(i).name.compare("ES") == 0)
+                {
+                    i += 2 ;
+                    es_onto_seg_name = oneLine.line_token.at(i).name ;
+                }
+                else
+                    ;
+
+                i++ ;
+            } // end while
+
+            return true ;
+        }
+
+        // byte && db
+        if (oneLine.line_token.at(i).name.compare("DB") == 0 ||
+            oneLine.line_token.at(i).name.compare("BYTE") == 0)
+        {
+            unsigned int keep_length = 0 ; // will adding for pc
+            i++ ;
+
+            while (i < oneLine.line_token.size())
+            {
+                if (oneLine.line_token.at(i).name.compare("DUP") == 0)
+                {
+                    // str to digits(u_int)
+                    unsigned int digits = 0 ;
+
+                    string digits_str = oneLine.line_token.at(i-1).name ;
+                    Recorder::strToUpper(digits_str) ;
+
+                    if (digits_str.at(digits_str.size()-1) == 'H') // hex
+                        digits = atoi_hex_to_dec(digits_str) ;
+                    else // dec
+                        digits = atoi(digits_str.c_str()) ;
+
+                    keep_length = keep_length + (1 * digits) ;
+                }
+
+                if (oneLine.line_token.at(i).table_num == 6) // digits
+                {
+                    if (i+1 < oneLine.line_token.size())
+                    {
+                        if (oneLine.line_token.at(i+1).name.compare("DUP") != 0)
+                        {
+                            keep_length += 1 ;
+                        }
+                    }
+                    else if (i == oneLine.line_token.size()-1)
+                        keep_length += 1 ;
+                }
+
+                if (oneLine.line_token.at(i).name.compare("\'") == 0) // string
+                {
+                    i++ ;
+
+                    for (unsigned int str_idx = 0 ; str_idx < oneLine.line_token.at(i).name.size(); str_idx++)
+                    {
+                        keep_length += 1 ;
+                    }
+
+                    i++ ; // postfix '
+                }
+
+                i++ ;
+            } // end while
+
+            virtual_PC += keep_length ;
+            return true ;
+        } // end db && byte
+
+        // dw && word
+        if (oneLine.line_token.at(i).name.compare("DW") == 0 ||
+            oneLine.line_token.at(i).name.compare("WORD") == 0)
+        {
+            unsigned int keep_length = 0 ; // will adding for pc
+            i++ ;
+
+            while (i < oneLine.line_token.size())
+            {
+                if (oneLine.line_token.at(i).name.compare("DUP") == 0)
+                {
+                    // str to digits(u_int)
+                    unsigned int digits = 0 ;
+
+                    string digits_str = oneLine.line_token.at(i-1).name ;
+                    Recorder::strToUpper(digits_str) ;
+
+                    if (digits_str.at(digits_str.size()-1) == 'H') // hex
+                        digits = atoi_hex_to_dec(digits_str) ;
+                    else // dec
+                        digits = atoi(digits_str.c_str()) ;
+
+                    keep_length = keep_length + (2 * digits) ;
+                }
+
+                if (oneLine.line_token.at(i).table_num == 6) // digits
+                {
+                    if (i+1 < oneLine.line_token.size())
+                    {
+                        if (oneLine.line_token.at(i+1).name.compare("DUP") != 0)
+                        {
+                            keep_length += 2 ;
+                        }
+                    }
+                    else if (i == oneLine.line_token.size()-1)
+                        keep_length += 2 ;
+                }
+
+                if (oneLine.line_token.at(i).name.compare("\'") == 0) // string
+                {
+                    i++ ;
+
+                    for (unsigned int str_idx = 0 ; str_idx < oneLine.line_token.at(i).name.size(); str_idx++)
+                    {
+                        keep_length += 2 ;
+                    }
+
+                    i++ ; // postfix '
+                }
+
+                i++ ;
+            } // end while
+
+            virtual_PC += keep_length ;
+            return true ;
+        } // end dw && word
+
+        // equ
+        if (oneLine.line_token.at(i).name.compare("EQU") == 0)
+        {
+            string expression ;
+
+            for (unsigned int j = i+1; j < oneLine.line_token.size(); j++)
+            {
+                if (oneLine.line_token.at(j).table_num == 6) // is digits
+                {
+                    string target_digits = oneLine.line_token.at(j).name ;
+                    if (target_digits.at(target_digits.size()-1) == 'H' ||
+                        target_digits.at(target_digits.size()-1) == 'h') // hex
+                    {
+                        unsigned int dec_num = atoi_hex_to_dec(oneLine.line_token.at(j).name) ;
+                        string tmp = to_string(dec_num) ;
+                        expression += tmp ;
+                    }
+                    else // dec
+                    {
+                        expression += oneLine.line_token.at(j).name ;
+                    }
+
+                }
+                else if (oneLine.line_token.at(j).name.compare("\'") == 0) // is string
+                {
+                    if (!expression.empty()) // error: using str as operand
+                    {
+                        cout << "line " << line_num << ": using str as a operand for calculate\n" ;
+                        error_status = 3 ;
+                        return true ;
+                    }
+
+                    // same as db string
+                    bool not_duplicate = false ;
+                    j++ ; // idx: str
+                    not_duplicate = add_symbol_entry(virtual_PC, oneLine.line_token.at(j).name, using_seg_reg,
+                                                     true) ;
+
+                    if (!not_duplicate)
+                    {
+                        cout << "line " << line_num << ": duplicate defined symbol\n" ;
+                        error_status = 1 ;
+                        return true ;
+                    }
+
+                    unsigned int keep_length = 0 ;
+
+                    for (unsigned int str_idx = 0 ; str_idx < oneLine.line_token.at(i).name.size(); str_idx++)
+                    {
+                        keep_length += 1 ;
+                    }
+
+                    virtual_PC += keep_length ;
+                    j ++ ;
+
+                    return true ; // end string case
+                }
+                else if (i+1 == oneLine.line_token.size() - 1 &&
+                         oneLine.line_token.at(j).table_num == 5) // is a symbol and only it exist
+                {
+                    string src_symbol = oneLine.line_token.at(j).name ;
+                    string target_symbol = oneLine.line_token.at(j-2).name ; // find addr of this symbol
+                    unsigned int addr_to_pc = 0 ;
+
+                    for (unsigned int search_idx = 0; search_idx < symbol_table.size(); search_idx++)
+                    {
+                        if (symbol_table.at(search_idx).name.compare(target_symbol) == 0)
+                        {
+                            addr_to_pc = (unsigned int)atoi_hex_to_dec(symbol_table.at(search_idx).address) ;
+                            add_symbol_entry(addr_to_pc, src_symbol, symbol_table.at(search_idx).seg_scope, false) ;
+
+                            break ;
+                        }
+                    } // end for
+
+                    return true ;
+                }
+                else if (oneLine.line_token.at(j).table_num == 5) // is a express which including symbol
+                {
+                    string src_symbol = oneLine.line_token.at(j).name ;
+
+                    // find this symbol from symbol table
+                    bool found = false ;
+
+                    for (unsigned int search_idx = 0; search_idx < symbol_table.size(); search_idx++)
+                    {
+                        // if exist: get addr of the symbol, and change it from __hex addr string to __dec string
+                        // add result to expression
+                        if (symbol_table.at(search_idx).name.compare(src_symbol) == 0)
+                        {
+                            unsigned int addr_to_pc = (unsigned int)atoi_hex_to_dec(symbol_table.at(search_idx).address) ;
+                            string dec_addr = to_string(addr_to_pc) ;
+                            expression += dec_addr ;
+                            found = true ;
+                            break ;
+                        }
+                    } // end for
+
+                    if (!found) // not found: error status = 2. after all commands are checked, check all again
+                    {
+                        error_status = 2 ;
+                        return true ;
+                    }
+                }
+                else if (oneLine.line_token.at(j).name.compare("+") == 0 ||
+                         oneLine.line_token.at(j).name.compare("-") == 0 ||
+                         oneLine.line_token.at(j).name.compare("(") == 0 ||
+                         oneLine.line_token.at(j).name.compare(")") == 0)  // + or - or ( or )
+                {
+                    expression += oneLine.line_token.at(j).name ;
+                }
+                else
+                    ;
+
+            } // end search (for)
+
+            // calculate expression
+            if (!expression.empty())
+            {
+                cout << "\nexpression: " << expression << endl ;
+
+                string res ;
+                infix_to_postfix(expression, res) ;
+                cout << "postfix: " << res << endl ;
+                res = calculate_postfix(expression, res) ; // get __dec addr
+
+                // change from __dec to __hex
+                string addr ;
+                display_addr(atoi(res.c_str()), addr) ;
+                cout << "addr: " << addr << endl ;
+
+                // add result to symbol table
+                SymbolEntry one_entry ;
+
+                one_entry.seg_scope = using_seg_reg ;
+                one_entry.name = oneLine.line_token.at(i-1).name ;
+                one_entry.address = addr ; // (__hex)
+                symbol_table.push_back(one_entry) ;
+            }
+
+        }
+
+    } // end for
+
+    return false ;
+}
+
+bool instr_type_1_filter(Recorder::LineInfo &oneLine)
+{
+    return false ;
+}
+
+bool Assembler::pass1()
 {
     Recorder &recorder = Recorder::getRecorder() ;
     vector<Recorder::LineInfo> &line_info_list = recorder.line_info_list ;
 
+    virtual_PC = 0 ;
+
+    // according to ASSUME pseudo,
+    // it decides what name is used to connect to segment reg
+    string cs_onto_seg_name = "empty",
+           ds_onto_seg_name = "empty",
+           ss_onto_seg_name = "empty",
+           es_onto_seg_name = "empty" ;
+
+    string using_seg_name ;
+    string using_seg_reg = "CS" ; // scope: default = CS
+
+    for (unsigned int line_num = 0; line_num < line_info_list.size(); line_num++)
+    {
+        bool all_exec = false ;
+        unsigned short error_status = 0 ; // not error
+
+        string addr ;
+        display_addr(virtual_PC, addr) ;
+        cout << "addr= " << addr << "\t" ;
+
+        // if it is segment declaration, set segment configuration
+        all_exec = pseudo_filter(line_info_list.at(line_num), line_num, cs_onto_seg_name, ds_onto_seg_name,
+                                 ss_onto_seg_name, es_onto_seg_name, using_seg_name, using_seg_reg,
+                                 error_status) ;
+
+        cout << line_info_list.at(line_num).origin_insr << endl ;
+
+        if (error_status == 1) // symbol duplicate defined
+            break ;
+
+        if (error_status == 2) // equ symbol not found or not defined
+
+        if (error_status == 3) // using str as operand
+            break ;
+
+        if (error_status == 4) // redefine symbol(EQU)
+            break ;
+
+        if (all_exec) continue ;
+
+    }
+
+    // test
+    for (unsigned int i = 0; i < symbol_table.size(); i++)
+    {
+        cout << symbol_table.at(i).seg_scope << ", " << symbol_table.at(i).name << ", " << symbol_table.at(i).address << endl ;
+    }
 
 }
 

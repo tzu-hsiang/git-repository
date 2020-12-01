@@ -2,29 +2,67 @@
 <CodeBlocks_layout_file>
 	<FileVersion major="1" minor="0" />
 	<ActiveTarget name="Debug" />
-	<File name="main.cpp" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="Assembler.cpp" open="1" top="1" tabpos="5" split="0" active="1" splitpos="0" zoom_1="-1" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="625" topLine="20" />
+			<Cursor1 position="55166" topLine="226" />
 		</Cursor>
+		<Folding>
+			<Collapse line="23" />
+			<Collapse line="65" />
+			<Collapse line="80" />
+			<Collapse line="90" />
+			<Collapse line="202" />
+			<Collapse line="487" />
+			<Collapse line="801" />
+			<Collapse line="834" />
+			<Collapse line="1080" />
+			<Collapse line="1159" />
+			<Collapse line="1199" />
+			<Collapse line="1230" />
+			<Collapse line="1335" />
+			<Collapse line="1358" />
+			<Collapse line="1374" />
+			<Collapse line="1410" />
+			<Collapse line="1467" />
+			<Collapse line="1710" />
+			<Collapse line="1728" />
+			<Collapse line="1743" />
+			<Collapse line="1778" />
+			<Collapse line="1906" />
+		</Folding>
 	</File>
-	<File name="Recorder.cpp" open="1" top="1" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="main.cpp" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="-1" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="6712" topLine="272" />
+			<Cursor1 position="2096" topLine="34" />
 		</Cursor>
 	</File>
 	<File name="Recorder.h" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="799" topLine="16" />
-		</Cursor>
-	</File>
-	<File name="Assembler.cpp" open="1" top="0" tabpos="5" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="3230" topLine="143" />
+			<Cursor1 position="717" topLine="13" />
 		</Cursor>
 	</File>
 	<File name="Assembler.h" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="303" topLine="0" />
+			<Cursor1 position="990" topLine="30" />
 		</Cursor>
+	</File>
+	<File name="Recorder.cpp" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="-1" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="14702" topLine="65" />
+		</Cursor>
+		<Folding>
+			<Collapse line="77" />
+			<Collapse line="88" />
+			<Collapse line="99" />
+			<Collapse line="122" />
+			<Collapse line="209" />
+			<Collapse line="260" />
+			<Collapse line="270" />
+			<Collapse line="316" />
+			<Collapse line="362" />
+			<Collapse line="408" />
+			<Collapse line="490" />
+			<Collapse line="576" />
+		</Folding>
 	</File>
 </CodeBlocks_layout_file>
