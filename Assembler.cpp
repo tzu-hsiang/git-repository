@@ -486,11 +486,13 @@ bool Assembler::segment_proc_test(unsigned int lineNum, Recorder::LineInfo &oneL
 
 bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
 {
-    // 1: digits or ' | 2: string | 3: ' | 4: , or DUP or ) | 5: DUP-> ( | 6: DUP-> ) | 7: ,
-    // if '+', '-', than it must be digits after '+/-'
-    // 8: digits
+    // 1: digits or ' or symbol | 2: string | 3: ' | 4: , or DUP or ) or '+' or '-' | 5: DUP-> ( | 6: DUP-> ) | 7: ,
+    // if '+', '-', than it must be digits or symbol after '+/-'
+    // 8: digits or symbol or (
     // 9: + or - or ( or digits
     // 10: + or - or ) or ,
+    // 11: ( or + or - or digits or symbol
+
     unsigned short expect_status = 0 ; // begin status
     bool is_dup_proccess = false ;
     int left_bracket = 0 ;
@@ -528,7 +530,8 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
 
                 if (i+1 < oneLine.line_token.size())
                 {
-                    if (oneLine.line_token.at(i+1).name.compare("-") == 0)
+                    if (oneLine.line_token.at(i+1).name.compare("-") == 0 ||
+                        oneLine.line_token.at(i+1).name.compare("+") == 0)
                     {
                         expect_status = 8 ;
                         i++ ;
@@ -546,14 +549,15 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
         }
 
-        if (expect_status == 1) // expect to get digits or a '(string prefix)
+        if (expect_status == 1) // expect to get digits or a '(string prefix) or symbol or + or -
         {
-            if (oneLine.line_token.at(i).table_num == 6) // case:digits
+            if (oneLine.line_token.at(i).table_num == 6 ||
+                oneLine.line_token.at(i).table_num == 5) // case:digits or a symbol
             {
                 if (is_dup_proccess)
                     expect_status = 6 ; // next get )
                 else
-                    expect_status = 4 ; // next get ,
+                    expect_status = 4 ; // next get ',' or DUP or '(' or ')' or '+' or '-'
 
                 continue ;
             }
@@ -562,9 +566,15 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
                 expect_status = 2 ;
                 continue ;
             }
+            else if (oneLine.line_token.at(i).name.compare("+") == 0 ||
+                     oneLine.line_token.at(i).name.compare("-") == 0)
+            {
+                expect_status = 8 ;
+                continue ;
+            }
             else
             {
-                cout << "line " << lineNum << ": invalid assign pseudo.\n" ;
+                cout << "line " << lineNum << ": invalid assign pseudo.(err#1)\n" ;
                 return false ;
             }
         } // end status=1
@@ -574,7 +584,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             if (oneLine.line_token.at(i).table_num != 7)
             {
                 cout << "errorname: " << oneLine.line_token.at(i).table_num << endl ;
-                cout << "line " << lineNum << ": invalid assign pseudo.\n" ;
+                cout << "line " << lineNum << ": invalid assign pseudo.(err#2)\n" ;
                 return false ;
             }
             else
@@ -602,7 +612,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
         } // end status=3
 
-        if (expect_status == 4) // expect to get a , or a DUP
+        if (expect_status == 4) // expect to get a , or DUP or ( or ) or '+' or '-'
         {
             if (oneLine.line_token.at(i).name.compare(",") == 0)
             {
@@ -622,10 +632,26 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
                 is_dup_proccess = true ;
                 continue ;
             }
+            else if (oneLine.line_token.at(i).name.compare("(") == 0)
+            {
+                left_bracket++ ;
+                expect_status = 11 ;
+                continue ;
+            }
             else if (oneLine.line_token.at(i).name.compare(")") == 0)
             {
                 left_bracket-- ;
                 expect_status = 10 ;
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).name.compare("+") == 0)
+            {
+                expect_status = 8 ;
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).name.compare("-") == 0)
+            {
+                expect_status = 8 ;
                 continue ;
             }
             else
@@ -645,6 +671,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
             else
             {
+                left_bracket++ ;
                 expect_status = 1 ;
                 continue ;
             }
@@ -659,6 +686,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
             else
             {
+                left_bracket-- ;
                 is_dup_proccess = false ; // reinitialize process status
                 expect_status = 7 ; // dup test success, it's next should be a ,
                 continue ;
@@ -679,15 +707,22 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
         } // end status=7
 
-        if (expect_status == 8) // expect to digits
+        if (expect_status == 8) // expect to digits or symbol or (
         {
-            if (oneLine.line_token.at(i).table_num == 6) // case:digits
+            if (oneLine.line_token.at(i).table_num == 6 ||
+                oneLine.line_token.at(i).table_num == 5) // case:digits
             {
                 if (is_dup_proccess)
                     expect_status = 6 ; // next get )
                 else
                     expect_status = 4 ; // next get ,
 
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).name.compare("(") == 0)
+            {
+                expect_status = 11 ;
+                left_bracket++ ;
                 continue ;
             }
             else
@@ -720,6 +755,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
             else if (oneLine.line_token.at(i).name.compare("(") == 0)
             {
+                left_bracket++ ;
                 expect_status = 9 ;
                 continue ;
             }
@@ -745,6 +781,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
             else if (oneLine.line_token.at(i).name.compare(")") == 0)
             {
+                left_bracket-- ;
                 expect_status = 10 ;
                 continue ;
             }
@@ -762,7 +799,6 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
 
                     if (oneLine.line_token.at(i+1).name.compare("(") == 0)
                     {
-                        left_bracket++ ;
                         expect_status = 9 ;
                         i++ ;
                     }
@@ -773,6 +809,37 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             else
             {
                 cout << "line " << lineNum << ": invalid assign pseudo.\n" ;
+                return false ;
+            }
+        } // end status=10
+
+        if (expect_status == 11) // expect a ( or + or - or symbol or digits
+        {
+            if (oneLine.line_token.at(i).name.compare("+") == 0)
+            {
+                expect_status = 8 ;
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).name.compare("-") == 0)
+            {
+                expect_status = 8 ;
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).name.compare("(") == 0)
+            {
+                left_bracket++ ;
+                expect_status = 11 ;
+                continue ;
+            }
+            else if (oneLine.line_token.at(i).table_num == 5 ||
+                     oneLine.line_token.at(i).table_num == 6)
+            {
+                expect_status = 10 ;
+                continue ;
+            }
+            else
+            {
+                cout << "line " << lineNum << ": invalid assign pseudo.(err#11)\n" ;
                 return false ;
             }
         } // end status=10
@@ -1319,6 +1386,16 @@ void Assembler::infix_to_postfix(string &src, string &result)
     if (src[0] == '+' || src[0] == '-')
         src.insert(0, "0") ;
 
+    unsigned int tmp_size = src.size() ;
+    for (unsigned int i = 1 ; i < tmp_size; i++)
+    {
+        if ((src[i] == '+' || src[i] == '-') && src[i-1] == '(')
+        {
+            src.insert(i, "0") ;
+            tmp_size = src.size() ;
+        }
+    }
+
     stack<char> buf ;
 
     for (unsigned int i = 0; i < src.size(); i++)
@@ -1584,6 +1661,7 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
         if (oneLine.line_token.at(i).name.compare("DB") == 0 ||
             oneLine.line_token.at(i).name.compare("BYTE") == 0)
         {
+            string expression ; // formula
             unsigned int keep_length = 0 ; // will adding for pc
             i++ ;
 
@@ -1605,18 +1683,87 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
                     keep_length = keep_length + (1 * digits) ;
                 }
 
+                if (oneLine.line_token.at(i).table_num == 5) // symbol
+                {
+                    if (i == oneLine.line_token.size()-1)
+                        keep_length += 1 ;
+                    else
+                    {
+                        if (i+1 < oneLine.line_token.size())
+                        {
+                            if (oneLine.line_token.at(i+1).name.compare(",") == 0)
+                                keep_length += 1 ;
+                            else
+                            {
+                                // find addr of the symbol
+                                bool found = false ;
+
+                                for (unsigned int x = 0; x < symbol_table.size(); x++)
+                                {
+                                    if (oneLine.line_token.at(i).name.compare(symbol_table[x].name) == 0)
+                                    {
+                                        found = true ;
+                                        keep_length += 1 ;
+                                    }
+                                }
+
+                                // if not found, error_status=2, after all are checked,
+                                // loop program until find it or confirm it that was not defined
+                                if (!found)
+                                {
+                                    error_status = 2 ;
+                                    keep_length += 1 ;
+                                }
+
+                                while (oneLine.line_token.at(i).name.compare(",") != 0)
+                                {
+                                    i++ ;
+                                    if (i >= oneLine.line_token.size())
+                                        break ;
+                                }
+
+                                if (i >= oneLine.line_token.size())
+                                    break ;
+
+
+                                // ...catch next character
+                            }
+                        }
+                    }
+                }
+
                 if (oneLine.line_token.at(i).table_num == 6) // digits
                 {
+
                     if (i+1 < oneLine.line_token.size())
                     {
-                        if (oneLine.line_token.at(i+1).name.compare("DUP") != 0)
+                        if (oneLine.line_token.at(i+1).name.compare("DUP") == 0) // expression or digits
+                            ;
+                        else
                         {
                             keep_length += 1 ;
+
+                            while (oneLine.line_token.at(i).name.compare(",") != 0)
+                            {
+                                i++ ;
+                                if (i >= oneLine.line_token.size())
+                                    break ;
+                            }
+
+                            if (i >= oneLine.line_token.size())
+                                break ;
+
+
+                            // ...catch next character
                         }
                     }
                     else if (i == oneLine.line_token.size()-1)
                         keep_length += 1 ;
+
+
                 }
+
+                // if + or -, is expression
 
                 if (oneLine.line_token.at(i).name.compare("\'") == 0) // string
                 {
@@ -1641,6 +1788,7 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
         if (oneLine.line_token.at(i).name.compare("DW") == 0 ||
             oneLine.line_token.at(i).name.compare("WORD") == 0)
         {
+            string expression ; // formula
             unsigned int keep_length = 0 ; // will adding for pc
             i++ ;
 
@@ -1662,18 +1810,87 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
                     keep_length = keep_length + (2 * digits) ;
                 }
 
+                if (oneLine.line_token.at(i).table_num == 5) // symbol
+                {
+                    if (i == oneLine.line_token.size()-1)
+                        keep_length += 2 ;
+                    else
+                    {
+                        if (i+1 < oneLine.line_token.size())
+                        {
+                            if (oneLine.line_token.at(i+1).name.compare(",") == 0)
+                                keep_length += 2 ;
+                            else
+                            {
+                                // find addr of the symbol
+                                bool found = false ;
+
+                                for (unsigned int x = 0; x < symbol_table.size(); x++)
+                                {
+                                    if (oneLine.line_token.at(i).name.compare(symbol_table[x].name) == 0)
+                                    {
+                                        found = true ;
+                                        keep_length += 2 ;
+                                    }
+                                }
+
+                                // if not found, error_status=2, after all are checked,
+                                // loop program until find it or confirm it that was not defined
+                                if (!found)
+                                {
+                                    error_status = 2 ;
+                                    keep_length += 2 ;
+                                }
+
+                                while (oneLine.line_token.at(i).name.compare(",") != 0)
+                                {
+                                    i++ ;
+                                    if (i >= oneLine.line_token.size())
+                                        break ;
+                                }
+
+                                if (i >= oneLine.line_token.size())
+                                    break ;
+
+
+                                // ...catch next character
+                            }
+                        }
+                    }
+                }
+
                 if (oneLine.line_token.at(i).table_num == 6) // digits
                 {
+
                     if (i+1 < oneLine.line_token.size())
                     {
-                        if (oneLine.line_token.at(i+1).name.compare("DUP") != 0)
+                        if (oneLine.line_token.at(i+1).name.compare("DUP") == 0) // expression or digits
+                            ;
+                        else
                         {
                             keep_length += 2 ;
+
+                            while (oneLine.line_token.at(i).name.compare(",") != 0)
+                            {
+                                i++ ;
+                                if (i >= oneLine.line_token.size())
+                                    break ;
+                            }
+
+                            if (i >= oneLine.line_token.size())
+                                break ;
+
+
+                            // ...catch next character
                         }
                     }
                     else if (i == oneLine.line_token.size()-1)
                         keep_length += 2 ;
+
+
                 }
+
+                // if + or -, is expression
 
                 if (oneLine.line_token.at(i).name.compare("\'") == 0) // string
                 {
@@ -1813,17 +2030,14 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
             // calculate expression
             if (!expression.empty())
             {
-                cout << "\nexpression: " << expression << endl ;
 
                 string res ;
                 infix_to_postfix(expression, res) ;
-                cout << "postfix: " << res << endl ;
                 res = calculate_postfix(expression, res) ; // get __dec addr
 
                 // change from __dec to __hex
                 string addr ;
                 display_addr(atoi(res.c_str()), addr) ;
-                cout << "addr: " << addr << endl ;
 
                 // add result to symbol table
                 SymbolEntry one_entry ;
@@ -1882,7 +2096,7 @@ bool Assembler::pass1()
         if (error_status == 1) // symbol duplicate defined
             break ;
 
-        if (error_status == 2) // equ symbol not found or not defined
+        if (error_status == 2) // symbol not found in this pass or not defined
 
         if (error_status == 3) // using str as operand
             break ;
