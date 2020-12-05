@@ -5,13 +5,17 @@ MSG     BYTE     'Green '
 SSD     BYTE     'Green '
         BYTE     'Grass '
         BYTE     -1234H,-SSD+SSD,44+17
-AA      EQU      -100H+(-40H-SSD)+30
+AA      EQU      SSD
 LF      WORD     0AH, 0DH, '$'
+        AAD
+        REP      MOVSB
+        POP      OFFSET AA
         MOV      AX,WORD PTR MSG
         MOV      DS,AX
         MOV      DX,WORD PTR MSG
         MOV      AH,4CH
-        INT      21H
+        INT      (-AA+10) + 21h
+        OUT      DS,AL
 MAIN    ENDP
 CODE    ENDS
         END      MAIN

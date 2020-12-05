@@ -18,6 +18,7 @@ void Assembler::clearTempStorage()
     virtual_PC = 0 ; ;
     vector<SymbolEntry>().swap(symbol_table) ;
     vector<string>().swap(instrs_addr) ;
+    vector<string>().swap(err_msg_list) ;
 }
 
 bool Assembler::isDigits(string& token)
@@ -77,7 +78,7 @@ bool Assembler::isDelimiter(char& src)
         return false ;
 }
 
-bool Assembler::checkIsComment(Recorder::LineInfo &oneLine)
+bool Assembler::checkIsComment(Recorder::LineInfo oneLine)
 {
     if (oneLine.line_token.at(0).name.compare(";") == 0)
     {
@@ -87,13 +88,14 @@ bool Assembler::checkIsComment(Recorder::LineInfo &oneLine)
     return false ;
 }
 
-bool Assembler::assume_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
+bool Assembler::assume_test(unsigned int lineNum, Recorder::LineInfo oneLine)
 {
     bool codeSegExist = false ;
     unsigned short processIdx = 1 ; // expect 1=seg_reg, 2=':', 3=seg_name, 4=','
 
     for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
     {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
         // Token: ASSUME
 
         if (oneLine.line_token.at(0).table_num == 2 &&
@@ -199,10 +201,11 @@ bool Assembler::assume_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
     return true ;
 }
 
-bool Assembler::segment_proc_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
+bool Assembler::segment_proc_test(unsigned int lineNum, Recorder::LineInfo oneLine)
 {
     for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
     {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
         // segment check
         if ((oneLine.line_token.size() != 2 &&
              oneLine.line_token.size() != 3 ) &&
@@ -484,7 +487,7 @@ bool Assembler::segment_proc_test(unsigned int lineNum, Recorder::LineInfo &oneL
     return true ;
 }
 
-bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
+bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo oneLine)
 {
     // 1: digits or ' or symbol | 2: string | 3: ' | 4: , or DUP or ) or '+' or '-' | 5: DUP-> ( | 6: DUP-> ) | 7: ,
     // if '+', '-', than it must be digits or symbol after '+/-'
@@ -499,6 +502,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
 
     for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
     {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
         // skip normal instructions
         if (oneLine.line_token.at(0).table_num == 1)
             break ;
@@ -598,7 +602,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
         {
             if (oneLine.line_token.at(i).name.compare("\'") != 0)
             {
-                cout << "line " << lineNum << ": invalid assign pseudo.\n" ;
+                cout << "line " << lineNum << ": invalid assign pseudo.(err#3)\n" ;
                 return false ;
             }
             else
@@ -624,7 +628,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
                 // before DUP, there is a string
                 if (oneLine.line_token.at(i-1).name.compare("\'") == 0)
                 {
-                    cout << "line " << lineNum << ": DUP needs a digits before declaration it.\n" ;
+                    cout << "line " << lineNum << ": DUP needs a digits before declaration it.(err#4)\n" ;
                     return false ;
                 }
 
@@ -656,7 +660,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
             else
             {
-                cout << "line " << lineNum << ": invalid assign pseudo(expect complete syntax).\n" ;
+                cout << "line " << lineNum << ": invalid assign pseudo(expect complete syntax).(err#4)\n" ;
                 return false ;
             }
 
@@ -666,7 +670,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
         {
             if (oneLine.line_token.at(i).name.compare("(") != 0)
             {
-                cout << "line " << lineNum << ": invalid assign pseudo(DUP).\n" ;
+                cout << "line " << lineNum << ": invalid assign pseudo(DUP).(err#5)\n" ;
                 return false ;
             }
             else
@@ -681,7 +685,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
         {
             if (oneLine.line_token.at(i).name.compare(")") != 0)
             {
-                cout << "line " << lineNum << ": invalid assign pseudo(DUP).\n" ;
+                cout << "line " << lineNum << ": invalid assign pseudo(DUP).(err#6)\n" ;
                 return false ;
             }
             else
@@ -697,7 +701,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
         {
             if (oneLine.line_token.at(i).name.compare(",") != 0)
             {
-                cout << "line " << lineNum << ": invalid assign pseudo.\n" ;
+                cout << "line " << lineNum << ": invalid assign pseudo.(err#7)\n" ;
                 return false ;
             }
             else
@@ -727,7 +731,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
             else
             {
-                cout << "line " << lineNum << ": invalid assign pseudo.\n" ;
+                cout << "line " << lineNum << ": invalid assign pseudo.(err#8)\n" ;
                 return false ;
             }
         } // end status=8
@@ -761,7 +765,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
             else
             {
-                cout << "line " << lineNum << ": invalid assign pseudo.\n" ;
+                cout << "line " << lineNum << ": invalid assign pseudo.(err#9)\n" ;
                 return false ;
             }
         } // end status=9
@@ -808,7 +812,7 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
             }
             else
             {
-                cout << "line " << lineNum << ": invalid assign pseudo.\n" ;
+                cout << "line " << lineNum << ": invalid assign pseudo.(err#10)\n" ;
                 return false ;
             }
         } // end status=10
@@ -865,10 +869,12 @@ bool Assembler::db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &o
     return true ;
 }
 
-bool Assembler::org_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
+bool Assembler::org_test(unsigned int lineNum, Recorder::LineInfo oneLine)
 {
     for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
     {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
+
         if (oneLine.line_token.at(i).name.compare("ORG") == 0)
         {
             if (oneLine.line_token.size() != 2)
@@ -898,13 +904,15 @@ bool Assembler::org_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
     return true ;
 }
 
-bool Assembler::equ_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
+bool Assembler::equ_test(unsigned int lineNum, Recorder::LineInfo oneLine)
 {
     bool equ_process = false ;
     unsigned int i = 0 ;
 
     for (i = 0 ; i < oneLine.line_token.size(); i++)
     {
+
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
         if (oneLine.line_token.at(i).name.compare("EQU") == 0)
         {
             if (oneLine.line_token.size() < 3)
@@ -1085,11 +1093,12 @@ bool Assembler::equ_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
     return true ;
 }
 
-bool Assembler::ptr_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
+bool Assembler::ptr_test(unsigned int lineNum, Recorder::LineInfo oneLine)
 {
-
     for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
     {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
+
         if (oneLine.line_token.at(i).name.compare("PTR") == 0)
         {
             if (oneLine.line_token.size() < 3) // at least be a format such as '(b/w) ptr label'
@@ -1118,9 +1127,10 @@ bool Assembler::ptr_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
             }
 
             if (oneLine.line_token.at(i+1).table_num != 5 &&
-                oneLine.line_token.at(i+1).name.compare("CODE") != 0)
+                oneLine.line_token.at(i+1).name.compare("CODE") != 0 &&
+                oneLine.line_token.at(i+1).name.compare("[") != 0)
             {
-                cout << "line " << lineNum << ": it must be a symbol name after 'PTR'\n" ;
+                cout << "line " << lineNum << ": it must be a memory address after 'PTR'\n" ;
                 return false ;
             }
 
@@ -1144,19 +1154,15 @@ bool Assembler::ptr_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
     return true ;
 }
 
-bool Assembler::offset_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
+bool Assembler::offset_test(unsigned int lineNum, Recorder::LineInfo oneLine)
 {
     for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
     {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
+
         if (oneLine.line_token.at(i).name.compare("OFFSET") == 0)
         {
             if (oneLine.line_token.size() < 2)
-            {
-                cout << "line " << lineNum << ": syntax error(OFFSET)\n" ;
-                return false ;
-            }
-
-            if (i+1 >= oneLine.line_token.size())
             {
                 cout << "line " << lineNum << ": syntax error(OFFSET)\n" ;
                 return false ;
@@ -1168,16 +1174,6 @@ bool Assembler::offset_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
                 return false ;
             }
 
-            if (i-1 >= 0)
-            {
-                // if it is placed something, should be a ,
-                if (oneLine.line_token.at(i-1).name.compare(",") != 0)
-                {
-                    cout << "line " << lineNum << ": syntax error(OFFSET)\n" ;
-                    return false ;
-                }
-            }
-
             break ; // test success
         }
     } // end for
@@ -1185,7 +1181,7 @@ bool Assembler::offset_test(unsigned int lineNum, Recorder::LineInfo &oneLine)
     return true ;
 }
 
-bool Assembler::pseudoCheck(unsigned int lineNum, Recorder::LineInfo &oneLine)
+bool Assembler::pseudoCheck(unsigned int lineNum, Recorder::LineInfo oneLine)
 {
     // if one error occur, set testSuccess = false
     bool testSuccess = true ;
@@ -1228,7 +1224,7 @@ bool Assembler::syntaxAnalysis()
     Recorder &recorder = Recorder::getRecorder() ;
     bool success = true ;
 
-    vector<Recorder::LineInfo> &line_info = recorder.line_info_list ;
+    vector<Recorder::LineInfo> line_info = recorder.line_info_list ;
 
     // check segment/proc/ syntax and code segment is really defined
     syntaxCheckBuffer.proc_num = 0 ;
@@ -1279,7 +1275,7 @@ int Assembler::atoi_hex_to_dec(string number)
     }
 
     int ans = 0 ;
-    for (start_pt = 0 ; start_pt < number.size() ; start_pt++)
+    for ( ; start_pt < number.size() ; start_pt++)
     {
         char t = number[start_pt] ;
         if (t == 'h' || t == 'H')
@@ -1516,14 +1512,14 @@ string Assembler::calculate_postfix(string infix, string &postfix)
     return buf.top() ;
 }
 
-bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num, string &cs_onto_seg_name,
+bool Assembler::pseudo_filter(Recorder::LineInfo oneLine, unsigned int line_num, string &cs_onto_seg_name,
                            string &ds_onto_seg_name, string &ss_onto_seg_name,
                            string &es_onto_seg_name, string &using_seg_name,
                            string &using_seg_reg, unsigned short &error_status)
 {
-
     for (unsigned int i = 0 ; i < oneLine.line_token.size(); i++)
     {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
         // def symbol
         if ((oneLine.line_token.at(i).table_num == 5 ||
             oneLine.line_token.at(i).name.compare("CODE") == 0) &&
@@ -1535,7 +1531,7 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
 
             if (oneLine.line_token.at(i+1).name.compare("EQU") == 0)
             {
-                if (oneLine.line_token.at(i+2).table_num != 5 ||
+                if (oneLine.line_token.at(i+2).table_num == 5 ||
                     i+2 != oneLine.line_token.size() - 1)
                 {
                     ;
@@ -1546,7 +1542,9 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
                                              true) ;
                     if (!not_duplicate)
                     {
-                        cout << "line " << line_num << ": duplicate defined symbol(" << oneLine.line_token.at(i).name << ")\n" ;
+                        string errmsg = string("line ") + to_string(line_num) + string(": duplicate defined symbol\'") +
+                                        string(oneLine.line_token.at(i).name) + string("\'\n") ;
+                        err_msg_list.push_back(errmsg) ;
                         error_status = 1 ;
                         return true ;
                     }
@@ -1567,7 +1565,9 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
                                              true) ;
                 if (!not_duplicate)
                 {
-                    cout << "line " << line_num << ": duplicate defined symbol(" << oneLine.line_token.at(i).name << ")\n" ;
+                    string errmsg = string("line ") + to_string(line_num) + string(": duplicate defined symbol\'") +
+                                        string(oneLine.line_token.at(i).name) + string("\'\n") ;
+                    err_msg_list.push_back(errmsg) ;
                     error_status = 1 ;
                     return true ;
                 }
@@ -1661,6 +1661,12 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
         if (oneLine.line_token.at(i).name.compare("DB") == 0 ||
             oneLine.line_token.at(i).name.compare("BYTE") == 0)
         {
+            if (i+1 < oneLine.line_token.size())
+            {
+                if (oneLine.line_token.at(i+1).name.compare("PTR") == 0)
+                    return false ;
+            }
+
             string expression ; // formula
             unsigned int keep_length = 0 ; // will adding for pc
             i++ ;
@@ -1788,6 +1794,13 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
         if (oneLine.line_token.at(i).name.compare("DW") == 0 ||
             oneLine.line_token.at(i).name.compare("WORD") == 0)
         {
+
+            if (i+1 < oneLine.line_token.size())
+            {
+                if (oneLine.line_token.at(i+1).name.compare("PTR") == 0)
+                    return false ;
+            }
+
             string expression ; // formula
             unsigned int keep_length = 0 ; // will adding for pc
             i++ ;
@@ -1938,7 +1951,8 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
                 {
                     if (!expression.empty()) // error: using str as operand
                     {
-                        cout << "line " << line_num << ": using str as a operand for calculate\n" ;
+                        string errmsg = string("line ") + to_string(line_num) + string(": using str as a operand for calculate\n") ;
+                        err_msg_list.push_back(errmsg) ;
                         error_status = 3 ;
                         return true ;
                     }
@@ -1951,7 +1965,8 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
 
                     if (!not_duplicate)
                     {
-                        cout << "line " << line_num << ": duplicate defined symbol\n" ;
+                        string errmsg = string("line ") + to_string(line_num) + string(": duplicate defined symbol\n") ;
+                        err_msg_list.push_back(errmsg) ;
                         error_status = 1 ;
                         return true ;
                     }
@@ -1964,11 +1979,11 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
                     }
 
                     virtual_PC += keep_length ;
-                    j ++ ;
+                    j++ ;
 
                     return true ; // end string case
                 }
-                else if (i+1 == oneLine.line_token.size() - 1 &&
+                else if (j == oneLine.line_token.size() - 1 &&
                          oneLine.line_token.at(j).table_num == 5) // is a symbol and only it exist
                 {
                     string src_symbol = oneLine.line_token.at(j).name ;
@@ -1977,10 +1992,10 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
 
                     for (unsigned int search_idx = 0; search_idx < symbol_table.size(); search_idx++)
                     {
-                        if (symbol_table.at(search_idx).name.compare(target_symbol) == 0)
+                        if (symbol_table.at(search_idx).name.compare(src_symbol) == 0)
                         {
                             addr_to_pc = (unsigned int)atoi_hex_to_dec(symbol_table.at(search_idx).address) ;
-                            add_symbol_entry(addr_to_pc, src_symbol, symbol_table.at(search_idx).seg_scope, false) ;
+                            add_symbol_entry(addr_to_pc, target_symbol, symbol_table.at(search_idx).seg_scope, false) ;
 
                             break ;
                         }
@@ -2055,8 +2070,1090 @@ bool Assembler::pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num
     return false ;
 }
 
-bool instr_type_1_filter(Recorder::LineInfo &oneLine)
+bool Assembler::instr_type_1_filter(Recorder::LineInfo oneLine)
 {
+    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
+
+        if (oneLine.line_token.at(i).name.compare("AAD") == 0 ||
+            oneLine.line_token.at(i).name.compare("AAM") == 0)
+        {
+            virtual_PC += 2 ;
+
+            if (oneLine.line_token.size() == 1)
+                return true ;
+        }
+    }
+
+    return false ;
+}
+
+bool Assembler::instr_type_2_filter(Recorder::LineInfo oneLine)
+{
+    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
+
+        if (oneLine.line_token.at(i).name.compare("AAA") == 0 ||
+            oneLine.line_token.at(i).name.compare("AAS") == 0 ||
+            oneLine.line_token.at(i).name.compare("CBW") == 0 ||
+            oneLine.line_token.at(i).name.compare("CLC") == 0 ||
+            oneLine.line_token.at(i).name.compare("CLD") == 0 ||
+            oneLine.line_token.at(i).name.compare("CLI") == 0 ||
+            oneLine.line_token.at(i).name.compare("CMC") == 0 ||
+            oneLine.line_token.at(i).name.compare("CMPSB") == 0 ||
+            oneLine.line_token.at(i).name.compare("CMPSW") == 0 ||
+            oneLine.line_token.at(i).name.compare("CWD") == 0 ||
+            oneLine.line_token.at(i).name.compare("DAA") == 0 ||
+            oneLine.line_token.at(i).name.compare("DAS") == 0 ||
+            oneLine.line_token.at(i).name.compare("FWAIT") == 0 ||
+            oneLine.line_token.at(i).name.compare("HLT") == 0 ||
+            oneLine.line_token.at(i).name.compare("INTO") == 0 ||
+            oneLine.line_token.at(i).name.compare("IRET") == 0 ||
+            oneLine.line_token.at(i).name.compare("LAHF") == 0 ||
+            oneLine.line_token.at(i).name.compare("LOCK") == 0 ||
+            oneLine.line_token.at(i).name.compare("LODSB") == 0 ||
+            oneLine.line_token.at(i).name.compare("LODSW") == 0 ||
+            oneLine.line_token.at(i).name.compare("MOVSB") == 0 ||
+            oneLine.line_token.at(i).name.compare("MOVSW") == 0 ||
+            oneLine.line_token.at(i).name.compare("NOP") == 0 ||
+            oneLine.line_token.at(i).name.compare("POPF") == 0 ||
+            oneLine.line_token.at(i).name.compare("PUSHF") == 0 ||
+            oneLine.line_token.at(i).name.compare("REP") == 0 ||
+            oneLine.line_token.at(i).name.compare("REPE") == 0 ||
+            oneLine.line_token.at(i).name.compare("REPNE") == 0 ||
+            oneLine.line_token.at(i).name.compare("REPNZ") == 0 ||
+            oneLine.line_token.at(i).name.compare("REPZ") == 0 ||
+            oneLine.line_token.at(i).name.compare("SAHF") == 0 ||
+            oneLine.line_token.at(i).name.compare("SCASB") == 0 ||
+            oneLine.line_token.at(i).name.compare("SCASW") == 0 ||
+            oneLine.line_token.at(i).name.compare("STC") == 0 ||
+            oneLine.line_token.at(i).name.compare("STD") == 0 ||
+            oneLine.line_token.at(i).name.compare("STI") == 0 ||
+            oneLine.line_token.at(i).name.compare("STOSB") == 0 ||
+            oneLine.line_token.at(i).name.compare("STOSW") == 0 ||
+            oneLine.line_token.at(i).name.compare("WAIT") == 0 ||
+            oneLine.line_token.at(i).name.compare("XLAT") == 0 )
+        {
+            virtual_PC += 1 ;
+
+            if (oneLine.line_token.size() == 1)
+                return true ;
+        }
+    }
+
+    return false ;
+}
+
+// begin from next char of '[' -> ']'
+bool Assembler::normal_addressing_syntax_check(Recorder::LineInfo oneLine, unsigned int begin, unsigned int end,
+                                        unsigned int line_num, bool &disp)
+{
+    unsigned short next_status = 1 ;
+
+    for (unsigned int x = begin; x < end; x++)
+    {
+        Recorder::strToUpper(oneLine.line_token.at(x).name) ;
+
+        if (oneLine.line_token.at(x).name.compare("]") == 0)
+            break ;
+
+        if (next_status == 1)  // expect word reg
+        {
+            if (!(oneLine.line_token.at(x).name.compare("BX") == 0 ||
+                  oneLine.line_token.at(x).name.compare("BP") == 0 ||
+                  oneLine.line_token.at(x).name.compare("SI") == 0 ||
+                  oneLine.line_token.at(x).name.compare("DI") == 0 ||
+                  oneLine.line_token.at(x).table_num == 6 ||
+                  oneLine.line_token.at(x).table_num == 5 ))
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error, expect specific word reg here\n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+            else
+            {
+                if (oneLine.line_token.at(x).name.compare("BP") == 0 &&
+                    oneLine.line_token.at(x+1).name.compare("]") == 0)
+                {
+                    string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error, expect specific word reg here\n") ;
+                    err_msg_list.push_back(errmsg) ;
+                    return false ;
+                }
+
+                if (oneLine.line_token.at(x).table_num == 6 ||
+                    oneLine.line_token.at(x).table_num == 5)
+                {
+                    next_status = 99 ;
+                    continue ;
+                }
+
+                next_status = 2 ;
+                continue ;
+            }
+
+        }
+
+        if (next_status == 99)
+        {
+            if (oneLine.line_token.at(x).name.compare("+") != 0 &&
+                oneLine.line_token.at(x).name.compare("-") != 0)
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error, expect operator here\n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+
+            next_status = 100 ;
+            continue ;
+        }
+
+        if (next_status == 100)
+        {
+            if (oneLine.line_token.at(x).table_num != 6 &&
+                oneLine.line_token.at(x).table_num != 5)
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error, expect digits or symbol\n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+
+            next_status = 99 ;
+            continue ;
+        }
+
+        if (next_status == 2) // expect + or -
+        {
+            if (oneLine.line_token.at(x).name.compare("+") != 0 &&
+                oneLine.line_token.at(x).name.compare("-") != 0)
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error, expect operator here\n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+            else
+            {
+                next_status = 3 ;
+                continue ;
+            }
+        }
+
+        if (next_status == 3) // expect digits(word) or SI or DI
+        {
+            if (oneLine.line_token.at(x).name.compare("SI") != 0 &&
+                oneLine.line_token.at(x).name.compare("DI") != 0 &&
+                oneLine.line_token.at(x).table_num != 6)
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error, expect specific reg or digits here\n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+            else
+            {
+                if (oneLine.line_token.at(x).table_num == 6)
+                    disp = true ;
+                next_status = 4 ;
+                continue ;
+            }
+        }
+
+        if (next_status == 4) // expect + or -
+        {
+            if (oneLine.line_token.at(x).name.compare("+") != 0 &&
+                oneLine.line_token.at(x).name.compare("-") != 0)
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error, expect operator here\n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+            else
+            {
+                next_status = 5 ;
+                continue ;
+            }
+        }
+
+        if (next_status == 5) // expect digits(word)
+        {
+            if (oneLine.line_token.at(x-1).table_num == 6)
+            {
+                cout << "line " << line_num << ": addressing syntax error, double digits here\n" ;
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error, double digits here\n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+
+            if (oneLine.line_token.at(x).table_num != 6)
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error, expect digits here\n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+            else
+            {
+                disp = true ;
+                continue ;
+            }
+        }
+    } // end for
+
+    return true ;
+}
+
+// begin form 'PTR' -> ']'
+bool Assembler::ptr_addressing_syntax_check(Recorder::LineInfo oneLine, unsigned int begin, unsigned int end,
+                                     unsigned int line_num, bool &disp)
+{
+    unsigned short next_status = 1 ;
+
+    for (unsigned int x = begin; x < end; x++)
+    {
+        Recorder::strToUpper(oneLine.line_token.at(x).name) ;
+
+        if (next_status == 1)
+        {
+            if (oneLine.line_token.at(x).name.compare("PTR") != 0)
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error \n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+            else
+            {
+                next_status = 2 ;
+                continue ;
+            }
+        }
+
+        if (next_status == 2)
+        {
+            if (oneLine.line_token.at(x).name.compare("[") != 0 &&
+                (oneLine.line_token.at(x).table_num != 5 ))
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error \n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+            else
+            {
+                if (oneLine.line_token.at(x).table_num == 5)
+                    next_status = 3 ;
+                else
+                    next_status = 4 ;
+                continue ;
+            }
+        }
+
+        if (next_status == 3)
+        {
+            // if enter this block, some error occur
+            string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error \n") ;
+                err_msg_list.push_back(errmsg) ;
+            return false ;
+        }
+
+        if (next_status == 4)
+        {
+            if (oneLine.line_token.at(x).name.compare("BX") == 0 ||
+                oneLine.line_token.at(x).name.compare("BP") == 0 ||
+                oneLine.line_token.at(x).name.compare("SI") == 0 ||
+                oneLine.line_token.at(x).name.compare("DI") == 0 )
+            {
+                next_status = 5 ;
+                continue ;
+            }
+            else
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error \n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+        }
+
+        if (next_status == 5)
+        {
+            if (oneLine.line_token.at(x).name.compare("]") == 0 )
+            {
+                if (oneLine.line_token.at(x-1).name.compare("BP") == 0 &&
+                    x+1 >= end)
+                {
+                    string errmsg = string("line ") + to_string(line_num) +
+                                    string(": addressing syntax error, expect specific word reg here\n") ;
+                    err_msg_list.push_back(errmsg) ;
+
+                    return false ;
+                }
+
+                next_status = 6 ;
+                continue ;
+            }
+            else
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error \n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+        }
+
+        if (next_status == 6)
+        {
+            if (oneLine.line_token.at(x).name.compare("[") == 0 )
+            {
+                next_status = 7 ;
+                continue ;
+            }
+            else if (oneLine.line_token.at(x).name.compare("+") == 0 ||
+                     oneLine.line_token.at(x).name.compare("-") == 0)
+            {
+                next_status = 10 ;
+                continue ;
+            }
+            else
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error \n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+        }
+
+        if (next_status == 7)
+        {
+            if (oneLine.line_token.at(x).name.compare("SI") == 0 ||
+                oneLine.line_token.at(x).name.compare("DI") == 0 )
+            {
+                next_status = 8 ;
+                continue ;
+            }
+            else
+            {
+               string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error \n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+        }
+
+        if (next_status == 8)
+        {
+            if (oneLine.line_token.at(x).name.compare("]") == 0)
+            {
+                next_status = 9 ;
+                continue ;
+            }
+            else
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error \n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+        }
+
+        if (next_status == 9)
+        {
+            if (oneLine.line_token.at(x).name.compare("+") == 0 ||
+                oneLine.line_token.at(x).name.compare("-") == 0)
+            {
+                next_status = 10 ;
+                continue ;
+            }
+            else
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error \n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+        }
+
+        if (next_status == 10)
+        {
+            if (oneLine.line_token.at(x).table_num == 6)
+            {
+                disp = true ;
+                next_status = 11 ;
+                continue ;
+            }
+            else
+            {
+                string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error \n") ;
+                err_msg_list.push_back(errmsg) ;
+                return false ;
+            }
+        }
+
+        if (next_status == 11)
+        {
+            string errmsg = string("line ") + to_string(line_num) + string(": addressing syntax error \n") ;
+                err_msg_list.push_back(errmsg) ;
+            return false ;
+        }
+    }
+
+    return true ;
+}
+
+bool Assembler::instr_type_3_filter(Recorder::LineInfo oneLine, unsigned int line_num,
+                                    unsigned short &error_status)
+{
+
+    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
+
+        if (oneLine.line_token.at(i).name.compare("PUSH") == 0 ||
+            oneLine.line_token.at(i).name.compare("POP") == 0)
+        {
+            if (oneLine.line_token.size() < 2)
+            {
+                string errmsg ;
+                if (oneLine.line_token.at(i).name.compare("PUSH") == 0)
+                    errmsg = string("line ") + to_string(line_num) + string(": syntax error(PUSH)\n") ;
+                else
+                    errmsg = string("line ") + to_string(line_num) + string(": syntax error(POP)\n") ;
+                err_msg_list.push_back(errmsg) ;
+                error_status = 5 ;
+                return true ;
+            }
+
+            if (oneLine.line_token.at(i+1).name.compare("AX") == 0 ||
+                oneLine.line_token.at(i+1).name.compare("BX") == 0 ||
+                oneLine.line_token.at(i+1).name.compare("CX") == 0 ||
+                oneLine.line_token.at(i+1).name.compare("DX") == 0 ||
+                oneLine.line_token.at(i+1).name.compare("SP") == 0 ||
+                oneLine.line_token.at(i+1).name.compare("BP") == 0 ||
+                oneLine.line_token.at(i+1).name.compare("SI") == 0 ||
+                oneLine.line_token.at(i+1).name.compare("DI") == 0 ||
+                oneLine.line_token.at(i+1).name.compare("ES") == 0 ||
+                oneLine.line_token.at(i+1).name.compare("CS") == 0 ||
+                oneLine.line_token.at(i+1).name.compare("DS") == 0 ||
+                oneLine.line_token.at(i+1).name.compare("SS") == 0 ) // word reg
+            {
+                virtual_PC += 1 ;
+            }
+            else if (oneLine.line_token.at(i+1).table_num == 5 &&
+                     i+1 == oneLine.line_token.size()-1) // direct addressing
+            {
+                virtual_PC += 2 ;
+                return true ;
+            }
+            else if (oneLine.line_token.at(i+1).name.compare("OFFSET") == 0 && // offset addressing
+                     oneLine.line_token.at(i+2).table_num == 5 &&
+                     i+2 == oneLine.line_token.size()-1)
+            {
+                virtual_PC += 2 ;
+                return true ;
+            }
+            else if (oneLine.line_token.at(i+1).name.compare("[") == 0 && // normal addressing
+                     oneLine.line_token.at(oneLine.line_token.size()-1).name.compare("]") == 0)
+            {
+                bool disp = false ;
+                bool ok = normal_addressing_syntax_check(oneLine, i+2, oneLine.line_token.size(), line_num, disp) ;
+                if (!ok)
+                {
+                    error_status = 6 ;
+                }
+                else
+                {
+                    if (disp)
+                        virtual_PC += 4 ;
+                    else
+                        virtual_PC += 2 ;
+                }
+
+                return true ;
+            }
+            else if (oneLine.line_token.at(i+1).name.compare("WORD") == 0) // word ptr addressing
+            {
+                bool disp = false ;
+                bool ok = ptr_addressing_syntax_check(oneLine, i+2, oneLine.line_token.size(), line_num, disp) ;
+                if (!ok)
+                {
+                    error_status = 6 ;
+                }
+                else
+                {
+                    if (disp)
+                    {
+                        virtual_PC += 4 ;
+                    }
+                    else
+                    {
+                        virtual_PC += 2 ;
+                    }
+
+                }
+
+                return true ;
+            }
+            else
+            {
+                string errmsg ;
+                if (oneLine.line_token.at(i).name.compare("PUSH") == 0)
+                    errmsg = string("line ") + to_string(line_num) + string(": syntax error(PUSH)\n") ;
+                else
+                    errmsg = string("line ") + to_string(line_num) + string(": syntax error(POP)\n") ;
+                err_msg_list.push_back(errmsg) ;
+                error_status = 5 ;
+                return true ;
+            }
+        }
+
+    }
+
+    return false ;
+}
+
+bool Assembler::is_expression(Recorder::LineInfo oneLine, unsigned int begin, unsigned int end,
+                                     unsigned int line_num, string &expression, unsigned short &error_status)
+{
+    expression.clear() ;
+    int left_brackets = 0 ;
+
+    for (unsigned int x = begin; x < end; x++)
+    {
+        Recorder::strToUpper(oneLine.line_token.at(x).name) ;
+
+        if (oneLine.line_token.at(x).name.compare("+") != 0 &&
+            oneLine.line_token.at(x).name.compare("-") != 0 &&
+            oneLine.line_token.at(x).name.compare("(") != 0 &&
+            oneLine.line_token.at(x).name.compare(")") != 0 &&
+            oneLine.line_token.at(x).table_num != 5 &&
+            oneLine.line_token.at(x).table_num != 6)
+                return false ;
+
+        if (oneLine.line_token.at(x).name.compare("+") == 0 ||
+            oneLine.line_token.at(x).name.compare("-") == 0)
+        {
+            expression += oneLine.line_token.at(x).name ;
+
+            if (x+1 < end)
+            {
+                if (oneLine.line_token.at(x+1).name.compare("(") == 0 ||
+                    oneLine.line_token.at(x+1).table_num == 5 ||
+                    oneLine.line_token.at(x+1).table_num == 6 )
+                {
+                    continue ;
+                }
+                else
+                {
+                    string errmsg ;
+                    errmsg = string("line ") + to_string(line_num)+ string(": syntax error(expressiom)\n") ;
+                    err_msg_list.push_back(errmsg) ;
+                    error_status = 7 ;
+                    return false ;
+                }
+            }
+            else
+            {
+                string errmsg ;
+                errmsg = string("line ") + to_string(line_num) + string(": syntax error(expressiom)\n") ;
+                err_msg_list.push_back(errmsg) ;
+                error_status = 7 ;
+                return false ;
+            }
+        } // end case + -
+
+        if (oneLine.line_token.at(x).name.compare("(") == 0)
+        {
+            left_brackets++ ;
+            expression += oneLine.line_token.at(x).name ;
+
+            if (x+1 < end)
+            {
+                if (oneLine.line_token.at(x+1).name.compare("(") == 0 ||
+                    oneLine.line_token.at(x+1).table_num == 5 ||
+                    oneLine.line_token.at(x+1).table_num == 6 ||
+                    oneLine.line_token.at(x+1).name.compare("+") == 0 ||
+                    oneLine.line_token.at(x+1).name.compare("-") == 0)
+                {
+                    continue ;
+                }
+                else
+                {
+                    string errmsg ;
+                    errmsg = string("line ") + to_string(line_num) + string(": syntax error(expressiom)\n") ;
+                    err_msg_list.push_back(errmsg) ;
+                    error_status = 7 ;
+                    return false ;
+                }
+            }
+            else
+            {
+                string errmsg ;
+                errmsg = string("line ") + to_string(line_num) + string(": syntax error(expressiom)\n") ;
+                err_msg_list.push_back(errmsg) ;
+                error_status = 7 ;
+                return false ;
+            }
+        } // end case (
+
+        if (oneLine.line_token.at(x).table_num == 5 ||
+            oneLine.line_token.at(x).table_num == 6)
+        {
+            unsigned int last = oneLine.line_token.at(x).name.size()-1 ;
+
+            if (oneLine.line_token.at(x).table_num == 6 &&
+                (oneLine.line_token.at(x).name.at(last) == 'H' ||
+                 oneLine.line_token.at(x).name.at(last) == 'h'))
+            {
+                unsigned int dec_num = atoi_hex_to_dec(oneLine.line_token.at(x).name) ;
+                string tmp = to_string(dec_num) ;
+                expression += tmp ;
+            }
+            else if(oneLine.line_token.at(x).table_num == 5)
+            {
+                bool found = false ;
+                for (unsigned int y = 0; y < symbol_table.size(); y++)
+                {
+                    if (oneLine.line_token.at(x).name.compare(symbol_table.at(y).name) == 0)
+                    {
+                        found = true ;
+                        unsigned int dec_num = atoi_hex_to_dec(symbol_table.at(y).address) ;
+                        string tmp = to_string(dec_num) ;
+                        expression += tmp ;
+                    }
+                }
+
+                if (!found)
+                {
+                    string errmsg ;
+                    errmsg = string("line ") + to_string(line_num) + string(": undefined symbol or forwarding reference,"
+                                                                                " this instruction not support forwarding\n") ;
+                    err_msg_list.push_back(errmsg) ;
+                    error_status = 7 ;
+                    return false ;
+                }
+            }
+            else
+                expression += oneLine.line_token.at(x).name ;
+
+            if (x+1 < end)
+            {
+
+                if (oneLine.line_token.at(x+1).name.compare("+") == 0 ||
+                    oneLine.line_token.at(x+1).name.compare("-") == 0 ||
+                    oneLine.line_token.at(x+1).name.compare(")") == 0)
+                {
+                    continue ;
+                }
+                else
+                {
+                    string errmsg ;
+                    errmsg = string("line ") + to_string(line_num) + string(": syntax error(expressiom)\n") ;
+                    err_msg_list.push_back(errmsg) ;
+                    error_status = 7 ;
+                    return false ;
+                }
+            }
+        } // end case digits symbol
+
+        if (oneLine.line_token.at(x).name.compare(")") == 0)
+        {
+            left_brackets-- ;
+            expression += oneLine.line_token.at(x).name ;
+
+            if (x+1 < end)
+            {
+                if (oneLine.line_token.at(x+1).name.compare("+") == 0 ||
+                    oneLine.line_token.at(x+1).name.compare("-") == 0 ||
+                    oneLine.line_token.at(x+1).name.compare(")") == 0)
+                {
+                    continue ;
+                }
+                else
+                {
+                    string errmsg ;
+                    errmsg = string("line ") + to_string(line_num) + string(": syntax error(expressiom)\n") ;
+                    err_msg_list.push_back(errmsg) ;
+                    error_status = 7 ;
+                    return false ;
+                }
+            }
+        } // end case )
+
+    } // end for
+
+    if (left_brackets != 0)
+    {
+        string errmsg ;
+        errmsg = string("line ") + to_string(line_num) + string(": syntax error(expressiom), loss or more brackets\n") ;
+        err_msg_list.push_back(errmsg) ;
+        error_status = 7 ;
+        return false ;
+    }
+
+    return true ;
+}
+
+bool Assembler::instr_type_5_filter(Recorder::LineInfo oneLine, unsigned int line_num,
+                                 unsigned short &error_status)
+{
+    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
+
+        if (oneLine.line_token.at(i).name.compare("RET") == 0 ||
+            oneLine.line_token.at(i).name.compare("RETF") == 0)
+        {
+            if (i+1 < oneLine.line_token.size())
+            {
+                string expression ;
+
+                if (is_expression(oneLine, i+1, oneLine.line_token.size(),
+                                     line_num, expression, error_status))
+                {
+                    string postfix ;
+                    infix_to_postfix(expression, postfix) ;
+                    string addr_dec = calculate_postfix(expression, postfix) ;
+
+                    virtual_PC += 3 ;
+
+                    return true ;
+                }
+                else
+                {
+                    string errmsg ;
+                    errmsg = string("line ") + to_string(line_num) + string(": syntax error(RET/RETF)\n") ;
+                    err_msg_list.push_back(errmsg) ;
+                    error_status = 6 ;
+                    return true ;
+                }
+            }
+            else if (i == oneLine.line_token.size()-1)
+            {
+                virtual_PC += 1 ;
+                return true ;
+            }
+            else
+            {
+                string errmsg ;
+                errmsg = string("line ") + to_string(line_num) + string(": syntax error(RET/RETF)\n") ;
+                err_msg_list.push_back(errmsg) ;
+                error_status = 6 ;
+                return true ;
+            }
+
+        }
+    }
+
+    return false ;
+}
+
+bool Assembler::instr_type_6_filter(Recorder::LineInfo oneLine, unsigned int line_num,
+                                 unsigned short &error_status)
+{
+    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
+
+        if (oneLine.line_token.at(i).name.compare("INT") == 0)
+        {
+            if (i == oneLine.line_token.size()-1)
+            {
+                string errmsg ;
+                errmsg = string("line ") + to_string(line_num) + string(": syntax error(INT)\n") ;
+                err_msg_list.push_back(errmsg) ;
+                error_status = 6 ;
+                return true ;
+            }
+
+            unsigned short status = 1 ;
+            string expression ;
+
+            for (unsigned int x = i+1; x < oneLine.line_token.size(); x++)
+            {
+                if (status == 1)
+                {
+                    if (is_expression(oneLine, i+1, oneLine.line_token.size(),
+                                     line_num, expression, error_status))
+                    {
+                        string postfix ;
+                        infix_to_postfix(expression, postfix) ;
+                        string addr_dec = calculate_postfix(expression, postfix) ;
+
+                        if (addr_dec.compare("3") == 0)
+                        {
+                            virtual_PC += 1 ;
+                        }
+                        else
+                            virtual_PC += 2 ;
+
+                        return true ;
+                    }
+                    else if (oneLine.line_token.at(x).name.compare("3") == 0 ||
+                             oneLine.line_token.at(x).name.compare("3H") == 0 ||
+                             oneLine.line_token.at(x).name.compare("3h") == 0)
+                    {
+                        virtual_PC += 1 ;
+                        status = 2 ;
+                        continue ;
+                    }
+                    else if (oneLine.line_token.at(x).table_num == 6)
+                    {
+                        virtual_PC += 2 ;
+                        status = 2 ;
+                        continue ;
+                    }
+                    else
+                    {
+                        string errmsg ;
+                        errmsg = string("line ") + to_string(line_num) + string(": syntax error(INT)\n") ;
+                        err_msg_list.push_back(errmsg) ;
+                        error_status = 6 ;
+                        return true ;
+                    }
+                }
+
+                if (status == 2)
+                {
+                    string errmsg ;
+                    errmsg = string("line ") + to_string(line_num) + string(": syntax error(INT)\n") ;
+                    err_msg_list.push_back(errmsg) ;
+                    error_status = 6 ;
+                    return true ;
+                }
+            }
+
+            return true ;
+        }
+
+
+    } // end for
+
+    return false ;
+}
+
+bool Assembler::instr_type_7_filter(Recorder::LineInfo oneLine, unsigned int line_num,
+                                 unsigned short &error_status)
+{
+    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
+
+        if (oneLine.line_token.at(i).name.compare("IN") == 0)
+        {
+            if (oneLine.line_token.size() < 4)
+            {
+                string errmsg ;
+                errmsg = string("line ") + to_string(line_num) + string(": syntax error(IN)\n") ;
+                err_msg_list.push_back(errmsg) ;
+                error_status = 6 ;
+                return true ;
+            }
+
+            unsigned short status = 1 ;
+            for (unsigned int x = i+1; x < oneLine.line_token.size(); x++)
+            {
+                if (status == 1)
+                {
+                    if (oneLine.line_token.at(x).name.compare("AL") == 0 ||
+                        oneLine.line_token.at(x).name.compare("AX") == 0)
+                    {
+                        status = 2 ;
+                        continue ;
+                    }
+                    else
+                    {
+                        string errmsg ;
+                        errmsg = string("line ") + to_string(line_num) + string(": syntax error(IN)\n") ;
+                        err_msg_list.push_back(errmsg) ;
+                        error_status = 6 ;
+                        return true ;
+                    }
+                }
+
+                if (status == 2)
+                {
+                    if (oneLine.line_token.at(x).name.compare(",") == 0)
+                    {
+                        status = 3 ;
+                        continue ;
+                    }
+                    else
+                    {
+                        string errmsg ;
+                        errmsg = string("line ") + to_string(line_num) + string(": syntax error(IN)\n") ;
+                        err_msg_list.push_back(errmsg) ;
+                        error_status = 6 ;
+                        return true ;
+                    }
+                }
+
+                if (status == 3)
+                {
+                    string expression ;
+
+                    if (oneLine.line_token.at(x).name.compare("DX") == 0)
+                    {
+                        status = 4 ;
+                        continue ;
+                    }
+                    else if (is_expression(oneLine, x, oneLine.line_token.size(),
+                                     line_num, expression, error_status))
+                    {
+                        status = 5 ;
+                        break ;
+                    }
+                    else
+                    {
+                        string errmsg ;
+                        errmsg = string("line ") + to_string(line_num) + string(": syntax error(IN)\n") ;
+                        err_msg_list.push_back(errmsg) ;
+                        error_status = 6 ;
+                        return true ;
+                    }
+                }
+
+                if (status == 4 || status == 5)
+                {
+                    string errmsg ;
+                    errmsg = string("line ") + to_string(line_num) + string(": syntax error(IN)\n") ;
+                    err_msg_list.push_back(errmsg) ;
+                    error_status = 6 ;
+                    return true ;
+                }
+            } // end for
+
+            if (status == 4) // DX
+                virtual_PC += 1 ;
+            else
+                virtual_PC += 2 ;
+
+            return true ;
+
+        } // end if (IN)
+    } // end for
+
+    return false ;
+}
+
+bool Assembler::instr_type_8_filter(Recorder::LineInfo oneLine, unsigned int line_num,
+                                 unsigned short &error_status)
+{
+    for (unsigned int i = 0; i < oneLine.line_token.size(); i++)
+    {
+        Recorder::strToUpper(oneLine.line_token.at(i).name) ;
+
+        if (oneLine.line_token.at(i).name.compare("OUT") == 0)
+        {
+            if (oneLine.line_token.size() < 4)
+            {
+                string errmsg ;
+                errmsg = string("line ") + to_string(line_num) + string(": syntax error(OUT)\n") ;
+                err_msg_list.push_back(errmsg) ;
+                error_status = 6 ;
+                return true ;
+            }
+
+            unsigned short status = 1 ;
+            bool is_exp = false ;
+            unsigned int exp_end_pt = 0 ;
+
+            for (unsigned int x = i+1; x < oneLine.line_token.size(); x++)
+            {
+                if (status == 1)
+                {
+                    // find ','
+                    bool found = false ;
+                    for(unsigned int y = i+1; y < oneLine.line_token.size(); y++)
+                    {
+                        if (oneLine.line_token.at(y).name.compare(",") == 0)
+                        {
+                            exp_end_pt = y ;
+                            found = true ;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        string errmsg ;
+                        errmsg = string("line ") + to_string(line_num) + string(": syntax error(OUT)\n") ;
+                        err_msg_list.push_back(errmsg) ;
+                        error_status = 6 ;
+                        return true ;
+                    }
+
+                    string expression ;
+                    if (oneLine.line_token.at(x).name.compare("DX") == 0 )
+                    {
+                        status = 2 ;
+                        continue ;
+                    }
+                    else if (is_expression(oneLine, x, exp_end_pt,
+                                     line_num, expression, error_status))
+                    {
+                        status = 2 ;
+                        is_exp = true ;
+                        continue ;
+                    }
+                    else
+                    {
+                        string errmsg ;
+                        errmsg = string("line ") + to_string(line_num) + string(": syntax error(OUT), expect specific reg\n") ;
+                        err_msg_list.push_back(errmsg) ;
+                        error_status = 6 ;
+                        return true ;
+                    }
+                }
+
+                if (status == 2)
+                {
+                    if (is_exp)
+                        x = exp_end_pt ;
+
+                    if (oneLine.line_token.at(x).name.compare(",") == 0)
+                    {
+                        status = 3 ;
+                        continue ;
+                    }
+                    else
+                    {
+                        string errmsg ;
+                        errmsg = string("line ") + to_string(line_num) + string(": syntax error(OUT)\n") ;
+                        err_msg_list.push_back(errmsg) ;
+                        error_status = 6 ;
+                        return true ;
+                    }
+                }
+
+                if (status == 3)
+                {
+
+                    if (oneLine.line_token.at(x).name.compare("AL") == 0 ||
+                        oneLine.line_token.at(x).name.compare("AX") == 0)
+                    {
+                        status = 4 ;
+                        continue ;
+                    }
+                    else
+                    {
+                        string errmsg ;
+                        errmsg = string("line ") + to_string(line_num) + string(": syntax error(OUT), expect specific reg\n") ;
+                        err_msg_list.push_back(errmsg) ;
+                        error_status = 6 ;
+                        return true ;
+                    }
+                }
+
+                if (status == 4)
+                {
+                    string errmsg ;
+                    errmsg = string("line ") + to_string(line_num) + string(": syntax error(OUT)\n") ;
+                    err_msg_list.push_back(errmsg) ;
+                    error_status = 6 ;
+                    return true ;
+                }
+            } // end for
+
+            if (status == 4 && is_exp) // DX
+                virtual_PC += 2 ;
+            else
+                virtual_PC += 1 ;
+
+            return true ;
+
+        } // end if (OUT)
+    } // end for
+
     return false ;
 }
 
@@ -2077,6 +3174,8 @@ bool Assembler::pass1()
     string using_seg_name ;
     string using_seg_reg = "CS" ; // scope: default = CS
 
+    cout << "### Pass1" << endl ;
+
     for (unsigned int line_num = 0; line_num < line_info_list.size(); line_num++)
     {
         bool all_exec = false ;
@@ -2085,26 +3184,55 @@ bool Assembler::pass1()
         string addr ;
         display_addr(virtual_PC, addr) ;
         cout << "addr= " << addr << "\t" ;
+        cout << line_info_list.at(line_num).origin_insr << endl ;
 
         // if it is segment declaration, set segment configuration
         all_exec = pseudo_filter(line_info_list.at(line_num), line_num, cs_onto_seg_name, ds_onto_seg_name,
-                                 ss_onto_seg_name, es_onto_seg_name, using_seg_name, using_seg_reg,
-                                 error_status) ;
-
-        cout << line_info_list.at(line_num).origin_insr << endl ;
+                    ss_onto_seg_name, es_onto_seg_name, using_seg_name, using_seg_reg, error_status) ;
 
         if (error_status == 1) // symbol duplicate defined
-            break ;
+            ;
 
         if (error_status == 2) // symbol not found in this pass or not defined
+            ;// reserve for EQU multiple pass
 
         if (error_status == 3) // using str as operand
-            break ;
+            ;
 
         if (error_status == 4) // redefine symbol(EQU)
-            break ;
+            ;
 
+        all_exec = instr_type_1_filter(line_info_list.at(line_num)) ;
         if (all_exec) continue ;
+
+        all_exec = instr_type_2_filter(line_info_list.at(line_num)) ;
+        if (all_exec) continue ;
+
+        all_exec = instr_type_3_filter(line_info_list.at(line_num), line_num, error_status) ;
+        if (error_status == 5 || error_status == 6) // normal syntax error
+             ;
+        if (all_exec) continue ;
+
+        all_exec = instr_type_5_filter(line_info_list.at(line_num), line_num, error_status) ;
+        if (error_status == 5 || error_status == 6 || error_status == 7) // normal syntax error
+            ;
+        if (all_exec) continue ;
+
+        all_exec = instr_type_6_filter(line_info_list.at(line_num), line_num, error_status) ;
+        if (error_status == 5 || error_status == 6 || error_status == 7) // normal syntax error
+            ;
+        if (all_exec) continue ;
+
+        all_exec = instr_type_7_filter(line_info_list.at(line_num), line_num, error_status) ;
+        if (error_status == 5 || error_status == 6 || error_status == 7) // normal syntax error
+            ;
+        if (all_exec) continue ;
+
+        all_exec = instr_type_8_filter(line_info_list.at(line_num), line_num, error_status) ;
+        if (error_status == 5 || error_status == 6 || error_status == 7) // normal syntax error
+            ;
+        if (all_exec) continue ;
+
 
     }
 
@@ -2114,6 +3242,17 @@ bool Assembler::pass1()
         cout << symbol_table.at(i).seg_scope << ", " << symbol_table.at(i).name << ", " << symbol_table.at(i).address << endl ;
     }
 
+    // error msg
+    cout << "error(s):\n" ;
+    for (unsigned int i = 0; i < err_msg_list.size(); i++)
+    {
+        cout << err_msg_list.at(i) ;
+    }
+
+    if (!err_msg_list.empty())
+        return false ;
+    else
+        return true ;
 }
 
 void Assembler::addTokenFrmBuf(bool DelimiterFlag, bool DigitFlag, bool StringFlag)

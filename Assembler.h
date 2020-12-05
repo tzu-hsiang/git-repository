@@ -57,6 +57,7 @@ class Assembler
         // small temporary buffer list
         string undef_token_buf ;
         SyntaxCheckBuffer syntaxCheckBuffer ;
+        vector<string> err_msg_list ;
         // end
 
         void addTokenFrmBuf(bool DelimiterFlag, bool DigitFlag, bool StringFlag) ;
@@ -65,21 +66,21 @@ class Assembler
         bool isDelimiter(char&) ;
         void cutOneLineToTokenBuf(string& code_line) ;
         void setIndexForTokenRecords(unsigned int line_idx) ;
-        bool checkIsComment(Recorder::LineInfo &oneLine) ;
-        bool pseudoCheck(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
+        bool checkIsComment(Recorder::LineInfo oneLine) ;
+        bool pseudoCheck(unsigned int lineNum, Recorder::LineInfo oneLine) ;
 
         // pseudo check
-        bool assume_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
-        bool segment_proc_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
-        bool db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
-        bool org_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
-        bool equ_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
-        bool ptr_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
-        bool offset_test(unsigned int lineNum, Recorder::LineInfo &oneLine) ;
+        bool assume_test(unsigned int lineNum, Recorder::LineInfo oneLine) ;
+        bool segment_proc_test(unsigned int lineNum, Recorder::LineInfo oneLine) ;
+        bool db_dw_byte_word_test(unsigned int lineNum, Recorder::LineInfo oneLine) ;
+        bool org_test(unsigned int lineNum, Recorder::LineInfo oneLine) ;
+        bool equ_test(unsigned int lineNum, Recorder::LineInfo oneLine) ;
+        bool ptr_test(unsigned int lineNum, Recorder::LineInfo oneLine) ;
+        bool offset_test(unsigned int lineNum, Recorder::LineInfo oneLine) ;
         // end
 
         // pass1 process
-        bool pseudo_filter(Recorder::LineInfo &oneLine, unsigned int line_num, string &cs_onto_seg_name,
+        bool pseudo_filter(Recorder::LineInfo oneLine, unsigned int line_num, string &cs_onto_seg_name,
                            string &ds_onto_seg_name, string &ss_onto_seg_name,
                            string &es_onto_seg_name, string &using_seg_name,
                            string &using_seg_reg, unsigned short &error_status) ;
@@ -91,14 +92,28 @@ class Assembler
         int priority(char &op) ;
         string calculate_postfix(string infix, string &postfix) ;
 
-        bool instr_type_1_filter(Recorder::LineInfo &oneLine) ;
-        void instr_type_2_filter(Recorder::LineInfo &oneLine) ;
-        void instr_type_3_filter(Recorder::LineInfo &oneLine) ;
-        void instr_type_4_filter(Recorder::LineInfo &oneLine) ;
-        void instr_type_5_filter(Recorder::LineInfo &oneLine) ;
-        void instr_type_6_filter(Recorder::LineInfo &oneLine) ;
-        void instr_type_7_filter(Recorder::LineInfo &oneLine) ;
-        void instr_type_8_filter(Recorder::LineInfo &oneLine) ;
+        bool normal_addressing_syntax_check(Recorder::LineInfo oneLine, unsigned int begin, unsigned int end,
+                                     unsigned int line_num, bool &disp) ;
+        bool ptr_addressing_syntax_check(Recorder::LineInfo oneLine, unsigned int begin, unsigned int end,
+                                     unsigned int line_num, bool &disp) ;
+
+        bool instr_type_1_filter(Recorder::LineInfo oneLine) ;
+        bool instr_type_2_filter(Recorder::LineInfo oneLine) ;
+        bool instr_type_3_filter(Recorder::LineInfo oneLine, unsigned int line_num,
+                                 unsigned short &error_status) ;
+        // type 4 is same as 3 for check
+
+        bool is_expression(Recorder::LineInfo oneLine, unsigned int begin, unsigned int end,
+                                     unsigned int line_num, string &expression, unsigned short &error_status) ;
+        bool instr_type_5_filter(Recorder::LineInfo oneLine, unsigned int line_num,
+                                 unsigned short &error_status) ;
+
+        bool instr_type_6_filter(Recorder::LineInfo oneLine, unsigned int line_num,
+                                 unsigned short &error_status) ;
+        bool instr_type_7_filter(Recorder::LineInfo oneLine, unsigned int line_num,
+                                 unsigned short &error_status) ;
+        bool instr_type_8_filter(Recorder::LineInfo oneLine, unsigned int line_num,
+                                 unsigned short &error_status) ;
         void instr_type_9_filter(Recorder::LineInfo &oneLine) ;
         void instr_type_10_filter(Recorder::LineInfo &oneLine) ;
         void instr_type_11_filter(Recorder::LineInfo &oneLine) ;
